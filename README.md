@@ -109,7 +109,7 @@ Finally, you realise this needs be done in some better way. Probably with a webs
 can log in internally, and you automatically receive a nice overview of how many seats you need, who
 exactly wants to drive, and so on...
 
-So you ask you friendly local confused gamer if they can do something about it. As such, here's the
+So you ask your friendly local confused gamer if they can do something about it. As such, here's the
 solution!
 
 <!--
