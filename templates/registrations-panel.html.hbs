@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Registrations - Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+	</head>
+	<body>
+		<h1>Registrations</h1>
+		<form action="/superuser" method="get">
+			<button>Back to superuser panel</button>
+		</form>
+
+		<div class="functionality-section">
+			<h2>Date range</h2>
+			<p>Shows all registrations between "From" and "To" in the table below. Persons <b>with no registrations in that time</b> period <b>won't be shown</b> in the table.</p>
+			<p>Both are inclusive, that means if a registration is on exactly one of the dates entered, it's shown as well. If you choose not to provide one or both dates, they're thought as "infinity".</p>
+			<form action="/registrations" method="get" id="login-div">
+				<input type="date" name="from"/>
+				<label>From</label>
+				<input type="date" name="to"/>
+				<label>To</label>
+				<button>Apply range</button>
+				</input>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>Registrations</h2>
+			<table>
+				<thead>
+					<th>First name</th>
+					<th>Last name</th>
+					<th>Registration count (Summed up {{sum}})</th>
+				</thead>
+				<tbody>
+					{{#each persons}}
+						<tr>
+							<td style="padding-top: 0.3em; padding-bottom: 0.3em;">{{this.person.prename}}</td>
+							<td>{{this.person.name}}</td>
+							<td style="text-align: left; font-family: monospace;">{{this.count}}</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

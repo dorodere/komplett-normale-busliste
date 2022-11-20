@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>{{prename}} {{name}} registrations — Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+	</head>
+	<body>
+		<h1>Registrations for {{prename}} {{name}}</h1>
+
+		<form action="/person" method="get">
+			<button>Back to person management</button>
+		</form>
+
+		<div class="functionality-section">
+			<table>
+				<thead>
+					<th>Datum</th>
+					<th>Angemeldet</th>
+				</thead>
+				<tbody>
+					{{#each registrations}}
+						<tr>
+							<td>{{this.pretty_date}}</td>
+							{{#if this.registration.registered}}
+								<td class="highlight-positive">Ja</td>
+							{{else}}
+								<td class="highlight-negative">Nein</td>
+							{{/if}}
+							<td class="toggle-button">
+								<form action="/person/register" method="post">
+									{{#if this.registration.registered}}
+										<input type="hidden" name="new_state" value="false"/>
+									{{else}}
+										<input type="hidden" name="new_state" value="true"/>
+									{{/if}}
+									<input type="hidden" name="date" value="{{this.registration.date}}"/>
+									<input type="hidden" name="id" value="{{this.registration.person.id}}"/>
+									<button>Ändern</button>
+								</form>
+							</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

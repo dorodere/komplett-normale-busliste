@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!-- Hello there, fellow scripter. In case you're looking to parse stuff out of
+	here, consider using pandas. -->
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Dashboard - Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+	</head>
+	<body>
+		<h1>Dashboard</h1>
+		{{#if flash}}
+			<p class="flash">{{flash}}</p>
+		{{/if}}
+		<div style="display: flex; justify-content: space-between;">
+			{{#if show_superuser_controls}}
+				<form action="/superuser" method="get">
+					<button>Return to superuser panel</button>
+				</form>
+			{{/if}}
+			<form action="/logout" method="post">
+				<button>Abmelden</button>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>Zukünftige Busfahrten</h2>
+			{{#if future_regs}}
+				<table>
+					<thead>
+						<tr>
+							<th>Datum</th>
+							<th>Bist du angemeldet?</th>
+						</tr>
+					</thead>
+					<tbody>
+							{{#each future_regs}}
+								<tr>
+									<td>{{this.pretty_date}}</td>
+									{{#if this.registration.registered}}
+										<td class="highlight-positive">Ja</td>
+									{{else}}
+										<td class="highlight-negative">Nein</td>
+									{{/if}}
+									<td class="toggle-button">
+										<form action="/register" method="post">
+											{{#if this.registration.registered}}
+												<input type="hidden" name="new_state" value="false"/>
+											{{else}}
+												<input type="hidden" name="new_state" value="true"/>
+											{{/if}}
+											<input type="hidden" name="date" value="{{this.registration.date}}"/>
+											<button>Ändern</button>
+										</form>
+									</td>
+								</tr>
+							{{/each}}
+					</tbody>
+				</table>
+			{{else}}
+				<p>Keine zukünftigen Busfahrten geplant. Ansonsten werden sie hier erscheinen!</p>
+			{{/if}}
+		</div>
+
+		<div class="functionality-section">
+			<h2>Vergangene Busfahrten</h2>
+			{{#if past_regs}}
+				<p>Diese sind nicht mehr veränderbar, aber als Referenz und für Transparenz werden sie trotzdem hier angezeigt.</p>
+				<!-- and no you scripty scripter, a serverside check for that is done ofc -->
+				<table>
+					<thead>
+						<tr>
+							<th>Datum</th>
+							<th>Warst du angemeldet?</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{#each past_regs}}
+							<tr>
+								<td>{{this.pretty_date}}</td>
+								{{#if this.registration.registered}}
+									<td class="highlight-positive">Ja</td>
+								{{else}}
+									<td class="highlight-negative">Nein</td>
+								{{/if}}
+							</tr>
+						{{/each}}
+					</tbody>
+				</table>
+			{{else}}
+				<p>Scheint, als wäre niemals ein Bus gefahren.</p>
+			{{/if}}
+		</div>
+	</body>
+</html>

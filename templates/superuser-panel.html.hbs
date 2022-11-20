@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Superuser panel - Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+	</head>
+	<body>
+		<h1>Superuser panel</h1>
+		{{#if flash}}
+			<p class="flash">{{flash}}</p>
+		{{/if}}
+
+		<div class="functionality-section">
+			<h2>Person management</h2>
+			<p>This is taken to another page in order to avoid accidental addings.</p>
+			<form action="/person" method="get">
+				<button>Go to person management</button>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>Registration management</h2>
+			<p>Allows you to look at registrations in a certain time period.</p>
+			<form action="/registrations" method="get">
+				<button>Go to registrations</button>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>Register yourself for existing drives</h2>
+			<p>Because you're a "superuser" (a user who is allowed to do administrative actions), you probably won't use the registration options below for yourself at all. They're still there in case you need them.</p>
+			<form action="/" method="get">
+				<button>Register yourself</button>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>Issue new drives</h2>
+			<p>Here you can issue new drives, which then can all other users register to. <b>A user cannot register to a non-existent drive.</b><p>
+			<form action="/drive/new" method="post" id="login-div">
+				<input type="date" name="date" required/>
+				<label>Drive date</label>
+				<button>Add a new drive</button>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>Upcoming drives</h2>
+			{{#if upcoming_drives}}
+				<table>
+					<thead>
+						<tr>
+							<th>Date</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{#each upcoming_drives}}
+							<tr>
+								<td>{{this.pretty_date}}</td>
+								<td class="toggle-button">
+									<form action="/drive/list" method="get"/>
+										<input type="hidden" name="date" value="{{this.date}}"/>
+										<button>Registrations</button>
+									</form>
+								</td>
+							</tr>
+						{{/each}}
+					</tbody>
+				</table>
+			{{else}}
+				<p>Well, seems like there are no drives in future. :(</p>
+			{{/if}}
+		</div>
+
+		<div class="functionality-section">
+			<h2>All drives</h2>
+			<p><b>NOTE: A delete action is irreversible and also deletes all associated registrations!</b></p>
+			{{#if drives}}
+				<table>
+					<thead>
+						<tr>
+							<th>Date</th>
+						</tr>
+					</thead>
+					<tbody>
+							{{#each drives}}
+								<tr>
+									<td>{{this.pretty_date}}</td>
+									<td>
+										<form action="/drive/list" method="get"/>
+											<input type="hidden" name="date" value="{{this.date}}"/>
+											<button>Registrations</button>
+										</form>
+									</td>
+									<td>
+										<form action="/drive/delete" method="post"/>
+											<input type="hidden" name="id" value="{{this.id}}"/>
+											<button class="dangerous">Delete</button>
+										</form>
+									</td>
+								</tr>
+							{{/each}}
+					</tbody>
+				</table>
+			{{else}}
+				<p>Also it seems like there are no drives at all.</p>
+			{{/if}}
+		</div>
+	</body>
+</html>

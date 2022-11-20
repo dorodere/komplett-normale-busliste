@@ -1,0 +1,180 @@
+/* everywhere */
+body {
+	width: min-content;
+	min-width: 30em;
+	max-width: 90%;
+	margin-left: auto;
+	margin-right: auto;
+	text-align: center;
+	background-color: #101010;
+	color: #FFFCFD;
+	font-family: Cantarell, sans-serif;
+}
+
+.functionality-section {
+	padding: 2em;
+	margin-top: 2em;
+	margin-bottom: 2em;
+	border-style: solid;
+	border-radius: 8px;
+	border-width: 1px;
+	border-color: #1D1D1D;
+}
+
+.functionality-section h2 {
+	margin-top: -0.25em;
+}
+
+.nocolor {
+	border: initial;
+	border-color: initial;
+	border-width: 3px;
+	background-color: initial;
+	color: initial;
+}
+
+.nocolor tbody tr td {
+	border: solid;
+	border-color: #A0A0A0;
+	border-width: 1px;
+}
+
+input {
+	background-color: #1D1D1D;
+	color: inherit;
+	border-style: none;
+	border-radius: 8px;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	padding-left: 8px;
+	padding-right: 8px;
+}
+
+button {
+	animation: 0.5s button-dehover ease-in both;
+	width: auto;
+	border-style: none;
+	border-radius: 8px;
+	background-color: #1D1D1D;
+	color: inherit;
+	padding-top: 4px;
+	padding-bottom: 4px;
+	padding-left: 8px;
+	padding-right: 8px;
+}
+
+button:hover {
+	animation: 0.2s button-hover ease-out both;
+}
+
+p {
+	width: 100%,
+}
+
+.dangerous {
+	margin-left: 12em;
+	background-color: #E52453;
+}
+
+@keyframes button-hover {
+	from {
+		color: inherit;
+	}
+
+	to {
+		color: #A0A0A0;
+	}
+}
+
+@keyframes button-dehover {
+	from {
+		color: #A0A0A0;
+	}
+
+	to {
+		color: inherit;
+	}
+}
+
+/* dashboard */
+
+th {
+	border-style: solid;
+	padding: .8em;
+}
+
+td {
+	border-style: dashed;
+	padding: .4em;
+}
+
+th, td {
+	border-color: #A0A0A0;
+	border-width: 1px;
+}
+
+table {
+	margin-left: auto;
+	margin-right: auto;
+	border-spacing: 0 5px;
+	border-collapse: collapse;
+}
+
+.highlight-positive {
+	color: #6BFDFE;
+}
+
+.highlight-negative {
+	color: #F7E92B;
+}
+
+.highlight-positive, .highlight-negative {
+	text-align: right;
+}
+
+.toggle-button {
+	border-style: none;
+}
+
+.toggle-button button {
+	margin-left: 0.4em;
+}
+
+/* login page */
+
+#login-div {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	width: 20rem;
+	margin: auto;
+}
+
+#login-div label {
+	flex-grow: 0.6;
+	text-align: left;
+	font-size: 0.8em;
+	padding-left: 0.95em;
+	padding-top: 0.1em;
+	padding-bottom: 0.6em;
+}
+
+#login-div input {
+	flex-grow: 1.3;
+	font-size: 0.95em;
+	user-select: text;
+	outline-style: none;
+	border-style: none;
+	border-radius: 8px;
+	background-color: #1D1D1D;
+	color: inherit;
+}
+
+#login-div button {
+	flex-grow: 1;
+	align-self: flex-end;
+}
+
+.note {
+	color: #A0A0A0;
+}

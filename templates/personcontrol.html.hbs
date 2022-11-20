@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Person management - Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+	</head>
+	<body>
+		<h1>Person management</h1>
+		<p><b>Be careful about the actions taken here.</b></p>
+		<form action="/superuser" method="get">
+			<button>Back to superuser panel</button>
+		</form>
+
+		{{#if flash}}
+			<p class="flash">{{flash}}</p>
+		{{/if}}
+
+		<div class="functionality-section">
+			<h2>Add a new person</h2>
+			<p>This will add a new person into the database which then can log in as a normal user.</p>
+			<form action="/person/new" method="post" id="login-div">
+				<input type="text" name="prename" required/>
+				<label>First name</label>
+				<input type="text" name="name" required/>
+				<label>Last name</label>
+				<input type="email" name="email" required/>
+				<label>Email, <b>always double-check!</b></label>
+				<button>Add person</button>
+			</form>
+		</div>
+
+		<div class="functionality-section">
+			<h2>All persons</h2>
+			<p><b>NOTE: A delete action is irreversible and also deletes all associated registrations!</b> (and no, there is no confirmation dialog)</p>
+
+			{{#each persons}}
+				<form action="/person/update" method="post" id="form-{{this.id}}" autocomplete="off">
+					<input type="hidden" name="id" value="{{this.id}}"/>
+				</form>
+			{{/each}}
+
+			<table>
+				<thead>
+					<th>First name</th>
+					<th>Last name</th>
+					<th>Email</th>
+				</thead>
+				<tbody>
+					{{#each persons}}
+						<tr>
+							<td><input form="form-{{this.id}}" type="text" name="prename" value="{{this.prename}}"/></td>
+							<td><input form="form-{{this.id}}" type="text" name="name" value="{{this.name}}"/></td>
+							<td><input form="form-{{this.id}}" type="email" name="email" value="{{this.email}}"/></td>
+							<td><button form="form-{{this.id}}">Apply changes</button></td>
+							<td>
+								<form action="/person/list" method="get">
+									<input name="id" type="hidden" value="{{this.id}}"/>
+									<button>Registrations</button>
+								</form>
+							</td>
+							<td>
+								<form action="/person/delete" method="post">
+									<input name="id" type="hidden" value="{{this.id}}"/>
+									<button class="dangerous">Delete</button>
+								</form>
+							</td>
+						</tr>
+					{{/each}}
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

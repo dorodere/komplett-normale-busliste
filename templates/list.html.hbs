@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>{{pretty_date}} - Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+	</head>
+	<body class="nocolor">
+		<h1>Busanmeldungen für den {{pretty_date}}</h1>
+		<p>Generiert um {{now}} UTC
+			<br>Anmerkung: Du musst die Spalte <b>Anwesend</b> ankreuzen.</p>
+		<table class="nocolor">
+			<thead>
+				<th>Vorname</th>
+				<th>Nachname</th>
+				<th>Angemeldet</th>
+				<th>Anwesend</th>
+			</thead>
+			<tbody>
+				{{#each registrations}}
+					<tr>
+						<td>{{this.person.prename}}</td>
+						<td>{{this.person.name}}</td>
+						{{#if this.registered}}
+							<td>Ja</td>
+						{{else}}
+							<td>Nein</td>
+						{{/if}}
+						<td></td>
+					</tr>
+				{{/each}}
+			</tbody>
+		</table>
+	</body>
+</html>
