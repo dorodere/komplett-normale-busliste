@@ -1,0 +1,11 @@
+[global]
+address = "127.0.0.1"
+port = 8008
+
+email = "invalid-testing-dummy@example.com"
+email_creds = "invalid-testing-dummy"
+jwt_key = "dGVzdGluZwo="
+smtp_server = "example.com"
+
+[global.databases]
+bususages = { url = "./testing-database.db" }

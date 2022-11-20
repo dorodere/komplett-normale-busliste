@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sqlite3
 
 
@@ -55,4 +56,4 @@ def init_database(filename: str = "testing-database.db"):
 
 
 if __name__ == "__main__":
-    init_database("../database.db")
+    init_database()

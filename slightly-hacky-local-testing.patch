@@ -1,0 +1,26 @@
+diff --git a/src/authflow.rs b/src/authflow.rs
+index 900668c..57cee2c 100644
+--- a/src/authflow.rs
++++ b/src/authflow.rs
+@@ -146,10 +146,12 @@ pub async fn login(
+     // second, generate the token
+     let (raw_token, encoded_token) = generate_token();
+     let url = uri!(
+-        "http://192.168.110.141",
++        "http://127.0.0.1:8008",
+         verify_token(token = encoded_token, person_id = person.id)
+     );
++    println!("{}", url);
+ 
++    /*
+     // third, send the email to the search result
+     match send_login_mail(
+         &url.to_string(),
+@@ -182,6 +184,7 @@ pub async fn login(
+         Err(SendMailError::BuildError(err)) => panic!("{}", err),
+         _ => (),
+     };
++    */
+ 
+     // fourth, hash token and insert into DB
+     let salt = SaltString::generate(rand::thread_rng());
