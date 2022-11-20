@@ -26,7 +26,7 @@ pub fn time_to_chrono_date(time_date: time::Date) -> chrono::NaiveDate {
         time::Weekday::Sunday => chrono::Weekday::Sun,
     };
 
-    chrono::NaiveDate::from_isoywd(iso_date.0, u32::from(iso_date.1), chrono_weekday)
+    chrono::NaiveDate::from_isoywd_opt(iso_date.0, u32::from(iso_date.1), chrono_weekday).unwrap()
 }
 
 pub fn format_date(date: chrono::NaiveDate) -> String {

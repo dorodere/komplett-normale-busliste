@@ -9,7 +9,7 @@ resolver = "2"
 
 [dependencies]
 ammonia = "3"
-argon2 = "0.2"
+argon2 = "0.4"
 cookie = "0.16"
 hmac = "0.11"
 jwt = "0.14"

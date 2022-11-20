@@ -7,7 +7,7 @@ use {
     },
     argon2::{
         password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-        Argon2, Version,
+        Algorithm, Argon2, Params, Version,
     },
     base64ct::{Base64UrlUnpadded, Encoding},
     chrono::Utc,
@@ -108,8 +108,11 @@ Komplett normale Busliste
 
 // Constructs an [`argon2::Argon2`] instance with reasonable settings.
 fn construct_argon2_instance() -> Argon2<'static> {
-    Argon2::new(None, 2, 15_u32 * 1024_u32, 1, Version::V0x13)
-        .expect("Invalid Argon2 configuration!")
+    Argon2::new(
+        Algorithm::Argon2id,
+        Version::V0x13,
+        Params::new(15_u32 * 1024_u32, 2, 1, None).unwrap(),
+    )
 }
 
 #[post("/", data = "<login_details>")]
@@ -187,7 +190,7 @@ pub async fn login(
     let salt = SaltString::generate(rand::thread_rng());
     let argon2 = construct_argon2_instance();
     let hashed_token = argon2
-        .hash_password_simple(&raw_token, salt.as_ref())
+        .hash_password(&raw_token, &salt)
         .expect("Could not hash token!")
         .to_string();
     if let Err(err) = conn
