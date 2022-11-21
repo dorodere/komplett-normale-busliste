@@ -75,6 +75,8 @@ cargo run
 
 </details>
 
+In case you're interested in general concepts, you can take a look at [the docs](./docs).
+
 [Git]: https://git-scm.com/
 [Rust]: https://doc.rust-lang.org/stable/book/ch01-01-installation.html
 [Python 3]: https://wiki.python.org/moin/BeginnersGuide/Download

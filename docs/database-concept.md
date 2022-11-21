@@ -27,7 +27,7 @@ As a such, I think the class diagram of `person` should look like this:
 
 ```text
 +--------------------------------------+
-|       	       person                |
+|                person                |
 +--------------------------------------+
 |   person_id INTEGER (primary key)    |
 |             prename TEXT             |
