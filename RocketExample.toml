@@ -1,6 +1,7 @@
 [global]
 address = "127.0.0.1"
 port = 8008
+outside_address = "http://127.0.0.1:8008"
 
 email = "invalid-testing-dummy@example.com"
 email_creds = "invalid-testing-dummy"

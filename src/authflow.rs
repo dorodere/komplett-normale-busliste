@@ -149,7 +149,7 @@ pub async fn login(
     // second, generate the token
     let (raw_token, encoded_token) = generate_token();
     let url = uri!(
-        "http://192.168.110.141",
+        config.outside_address.clone(),
         verify_token(token = encoded_token, person_id = person.id)
     );
 

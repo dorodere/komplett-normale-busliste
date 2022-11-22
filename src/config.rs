@@ -1,13 +1,19 @@
 use {
     base64ct::{Base64, Encoding, Error},
     hmac::{Hmac, NewMac},
-    rocket::serde::{de, Deserialize},
+    rocket::{
+        http::uri,
+        serde::{de, Deserialize},
+    },
     sha2::Sha256,
     std::fmt,
 };
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
+    /// Under which address this instance is reachable.
+    pub outside_address: uri::Absolute<'static>,
+
     /// The email from which mails with login links will be sent.
     pub email: lettre::Address,
 
