@@ -119,6 +119,33 @@ fn false_if_null(cell_query_result: rusqlite::Result<bool>) -> rusqlite::Result<
     }
 }
 
+pub enum DatabaseStatus {
+    AlreadyExistent,
+    Created,
+}
+
+pub fn init_db_if_necessary(
+    conn: &mut rusqlite::Connection,
+) -> Result<DatabaseStatus, rusqlite::Error> {
+    // dummy query to see if the db has a table in it
+    // yeah, we could query sqlite_master, but this way we can also directly ask for the
+    // columns
+    if conn
+        .execute(
+            "SELECT person_id, name, email
+            FROM person
+            WHERE false",
+            [],
+        )
+        .is_err()
+    {
+        conn.execute_batch(include_str!("./init_db.sql"))?;
+        Ok(DatabaseStatus::Created)
+    } else {
+        Ok(DatabaseStatus::AlreadyExistent)
+    }
+}
+
 pub enum SearchRegistrationsBy {
     /// Searches the registrations by date. All persons are included, regardless of whether they
     /// registered or not.

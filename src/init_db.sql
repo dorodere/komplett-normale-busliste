@@ -1,4 +1,4 @@
-CREATE TABLE person(
+CREATE TABLE IF NOT EXISTS person(
     person_id INTEGER,
     prename TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -9,13 +9,13 @@ CREATE TABLE person(
     UNIQUE(email),
     PRIMARY KEY (person_id AUTOINCREMENT)
 );
-CREATE TABLE drive(
+CREATE TABLE IF NOT EXISTS drive(
     drive_id INTEGER,
     drivedate DATE NOT NULL,
     UNIQUE(drivedate),
     PRIMARY KEY (drive_id AUTOINCREMENT)
 );
-CREATE TABLE registration(
+CREATE TABLE IF NOT EXISTS registration(
     id INTEGER,
     person_id INTEGER NOT NULL,
     drive_id INTEGER NOT NULL,
