@@ -8,13 +8,13 @@ CREATE TABLE person(
     is_superuser BOOLEAN NOT NULL,
     UNIQUE(email),
     PRIMARY KEY (person_id AUTOINCREMENT)
-)
+);
 CREATE TABLE drive(
     drive_id INTEGER,
     drivedate DATE NOT NULL,
     UNIQUE(drivedate),
     PRIMARY KEY (drive_id AUTOINCREMENT)
-)
+);
 CREATE TABLE registration(
     id INTEGER,
     person_id INTEGER NOT NULL,
@@ -28,4 +28,4 @@ CREATE TABLE registration(
             ON DELETE CASCADE
             ON UPDATE CASCADE,
     PRIMARY KEY (id AUTOINCREMENT) 
-)
+);

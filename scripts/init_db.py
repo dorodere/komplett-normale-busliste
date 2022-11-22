@@ -1,51 +1,35 @@
 #!/usr/bin/env python3
 import sqlite3
 
+from utils import toplevel
+
+
+with open(toplevel() / "src/init_db.sql") as fh:
+    INIT_DB_SCRIPT = fh.read()
+
 
 def init_persons(cur, tablename="person"):
-    cur.execute(
-        f"""CREATE TABLE {tablename}(
-        person_id INTEGER,
-        prename TEXT NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        token TEXT,
-        token_expiration INTEGER,
-        is_superuser BOOLEAN NOT NULL,
-        UNIQUE(email),
-        PRIMARY KEY (person_id AUTOINCREMENT)
-    )"""
-    )
+    # some hacky splitting work since we only want to create the person table here
+    # needed for the import-from-csv mechanism
+
+    tables = INIT_DB_SCRIPT.split("CREATE TABLE")
+    for part in tables:
+        lines = part.splitlines() or [""]
+        if " person(" in lines[0]:
+            person_table = "CREATE TABLE" + part
+
+    with_modified_tablename = person_table.replace("person", tablename, 1)
+
+    print(with_modified_tablename)
+    cur.executescript(with_modified_tablename)
 
 
-def init_database(filename: str = "testing-database.db"):
+def init_database(filename: str = toplevel() / "testing-database.db"):
     conn = sqlite3.connect(filename)
     cur = conn.cursor()
-    init_persons(cur)
-    cur.execute(
-        """CREATE TABLE drive(
-        drive_id INTEGER,
-        drivedate DATE NOT NULL,
-        UNIQUE(drivedate),
-        PRIMARY KEY (drive_id AUTOINCREMENT)
-    )"""
-    )
-    cur.execute(
-        """CREATE TABLE registration(
-        id INTEGER,
-        person_id INTEGER NOT NULL,
-        drive_id INTEGER NOT NULL,
-        registered BOOLEAN NOT NULL,
-        UNIQUE(person_id, drive_id),
-        FOREIGN KEY (person_id) REFERENCES person(person_id)
-                ON DELETE CASCADE
-                ON UPDATE CASCADE,
-        FOREIGN KEY (drive_id) REFERENCES drive(drive_id)
-                ON DELETE CASCADE
-                ON UPDATE CASCADE,
-        PRIMARY KEY (id AUTOINCREMENT) 
-    )"""
-    )
+
+    cur.executescript(INIT_DB_SCRIPT)
+
     cur.execute(
         """INSERT INTO person(prename, name, email, is_superuser)
     VALUES ('John', 'Doe', 'john_doe@example.com', true)"""
