@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS person(
     token TEXT,
     token_expiration INTEGER,
     is_superuser BOOLEAN NOT NULL,
+    is_visible BOOLEAN NOT NULL,
     UNIQUE(email),
     PRIMARY KEY (person_id AUTOINCREMENT)
 );

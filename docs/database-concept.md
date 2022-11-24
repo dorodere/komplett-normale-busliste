@@ -23,6 +23,9 @@ Also a field is needed to check on login whether to give the client on login a
 normal user token or a superuser token, which allows them to register more
 drives dates as well as seeing all persons that registered.
 
+Additionally, unrelated to whether a person is a superuser, it's also possible
+that a person wants to drive with the bus anyways. So that's two columns.
+
 As a such, I think the class diagram of `person` should look like this:
 
 ```text
@@ -36,6 +39,7 @@ As a such, I think the class diagram of `person` should look like this:
 |              token TEXT              |
 |       token_expiration INTEGER       |
 |         is_superuser BOOLEAN         |
+|          is_visible BOOLEAN          |
 +--------------------------------------+
 ```
 
@@ -87,3 +91,6 @@ The class diagrams are easily translatable to a [database layout].
 
 [database layout]: ../src/init_db.sql
 
+<!--
+vim: et sts=0 ts=2 sw=2
+-->
