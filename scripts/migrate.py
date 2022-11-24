@@ -29,7 +29,7 @@ def upgrade(database: Path, migrations):
             print("### Error occurred, rolling database back!", file=sys.stderr)
             shutil.copyfile(Path(backupdir) / "backup.db", database)
 
-            print(f"### Current script: {script_path}")
+            print(f"### Current script: {script_path}\n", file=sys.stderr)
 
             raise err
 
