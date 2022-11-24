@@ -57,6 +57,7 @@ fn persons() {
             prename: "Jackie".to_string(),
             name: "Hotel".to_string(),
             email: "jackie_hotel@non-existent-domain".parse().unwrap(),
+            is_visible: true,
         },
     )
     .unwrap();
