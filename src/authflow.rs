@@ -23,9 +23,9 @@ use {
         response::{Flash, Redirect},
         State,
     },
-    rocket_dyn_templates::Template,
+    rocket_dyn_templates::{context, Template},
     serde::{Deserialize, Serialize},
-    std::{collections::HashMap, fmt, time::Duration},
+    std::{fmt, time::Duration},
     thiserror::Error,
 };
 
@@ -35,12 +35,29 @@ pub struct LoginForm {
 }
 
 #[get("/", rank = 2)]
-pub fn index(flash: Option<FlashMessage<'_>>) -> Template {
-    let mut context = HashMap::new();
-    if let Some(flash) = flash {
-        context.insert("message", flash.message().to_string());
-    }
-    Template::render("login", &context)
+pub async fn index(
+    conn: BususagesDBConn,
+    flash: Option<FlashMessage<'_>>,
+) -> Result<Template, Flash<Redirect>> {
+    // TODO potential DoS, performing a query on _every_ index call? doesn't require auth
+    let login_message = conn
+        .run(|c| sql_interface::get_setting(c, "login-message"))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!("Non-user error while displaying login page: {}", err),
+                "ein Fehler trat auf, während ich nach den Einstellungen geschaut habe",
+            )
+        })?;
+    let login_message = sql_interface::stringify_value(login_message.value);
+
+    Ok(Template::render(
+        "login",
+        context! {
+            flash: flash.map(|flash| flash.message().to_string()),
+            login_message,
+        },
+    ))
 }
 
 /// Generates a token with 128 random bytes, constant-time encoded in URL-safe base64. Also returns

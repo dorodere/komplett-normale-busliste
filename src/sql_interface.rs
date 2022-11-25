@@ -639,3 +639,13 @@ pub fn set_setting(
         Some(_) => Ok(()),
     }
 }
+
+pub fn stringify_value(value: Value) -> String {
+    match value {
+        Value::Null => "".to_string(),
+        Value::Integer(number) => number.to_string(),
+        Value::Real(number) => number.to_string(),
+        Value::Text(text) => text,
+        Value::Blob(blob) => String::from_utf8_lossy(&blob).to_string(),
+    }
+}
