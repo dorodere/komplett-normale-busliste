@@ -25,7 +25,7 @@ use {
     },
     rocket_dyn_templates::Template,
     serde::{Deserialize, Serialize},
-    std::{collections::HashMap, time::Duration},
+    std::{collections::HashMap, fmt, time::Duration},
     thiserror::Error,
 };
 
@@ -64,7 +64,7 @@ enum SendMailError {
 
 /// Sends a login mail with the given credentials and mail server.
 async fn send_login_mail(
-    url: &str,
+    url: impl AsRef<str> + fmt::Debug + fmt::Display,
     from: lettre::Address,
     to: lettre::Address,
     password: &str,
@@ -159,31 +159,30 @@ pub async fn login(
         log::info!("login link: {}", url);
         drop(url);
     } else {
-        match send_login_mail(
-            &url.to_string(),
+        let send_mail_result = send_login_mail(
+            url.to_string(),
             config.email.clone(),
             person.email.clone(),
             &config.email_creds,
             &config.smtp_server,
-        )
-        .await
-        {
+        );
+        match send_mail_result.await {
             Err(SendMailError::LettreError(err)) => {
                 let (logmsg, flashmsg) = if err.is_permanent() {
                     (
-                    format!("Permanent SMTP error while sending email: {}", err),
-                    "ein permanenter Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
-                )
+                        format!("Permanent SMTP error while sending email: {}", err),
+                        "ein permanenter Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
+                    )
                 } else if err.is_transient() {
                     (
-                    format!("Transient SMTP error while sending email: {}", err),
-                    "ein temporärer Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
-                )
+                        format!("Transient SMTP error while sending email: {}", err),
+                        "ein temporärer Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
+                    )
                 } else {
                     (
-                    format!("Error occured while trying to send email: {}", err),
-                    "ein Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
-                )
+                        format!("Error occured while trying to send email: {}", err),
+                        "ein Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
+                    )
                 };
                 return Err(server_error(&logmsg, flashmsg));
             }
