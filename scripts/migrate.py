@@ -22,7 +22,10 @@ def upgrade(database: Path, migrations):
                 with open(script_path) as fh:
                     script = fh.read()
 
-                cur.execute(script)
+                cur.executescript(script)
+
+            conn.commit()
+            conn.close()
 
         except Exception as err:
             print("### Error occurred, rolling database back!", file=sys.stderr)
