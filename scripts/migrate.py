@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# database revision 001: add is_visible column
 import argparse
 import shutil
 import sqlite3
@@ -37,7 +36,10 @@ def upgrade(database: Path, migrations):
 def parse_args():
     parser = argparse.ArgumentParser(
         prog="database migration helper",
-        description="Migrates SQLite databases by applying the given SQL scripts",
+        description=(
+            "Migrates SQLite databases by applying the given SQL scripts, "
+            "rolling back if any errors occur"
+        ),
         epilog="bottom text",
     )
     parser.add_argument(
