@@ -3,9 +3,9 @@ use {
     chrono::Utc,
     lettre::Address,
     rocket_sync_db_pools::rusqlite,
-    rusqlite::{named_params, types::Type},
+    rusqlite::{named_params, types::Type, types::Value, ToSql},
     serde::{Deserialize, Serialize},
-    std::time::Duration,
+    std::{fmt, time::Duration},
     thiserror::Error,
 };
 
@@ -578,4 +578,64 @@ pub fn delete_person(
         },
     )?;
     Ok(())
+}
+
+pub struct Setting {
+    pub description: String,
+    pub value: Value,
+}
+
+pub fn get_setting(
+    conn: &mut rusqlite::Connection,
+    name: impl AsRef<str>,
+) -> Result<Setting, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT description, value
+        FROM settings
+        WHERE name == :name",
+    )?;
+    let mut query = statement.query(named_params! {
+        ":name": name.as_ref(),
+    })?;
+
+    // can contain only one row since `name` is the primary key
+    let row = query.next()?.unwrap_or_else(|| {
+        panic!(
+            "expected setting '{:?}' to exist to query, found nothing in database",
+            name.as_ref()
+        )
+    });
+
+    let setting = Setting {
+        description: row.get(0)?,
+        value: row.get(1)?,
+    };
+
+    Ok(setting)
+}
+
+pub fn set_setting(
+    conn: &mut rusqlite::Connection,
+    name: impl AsRef<str>,
+    value: impl ToSql + fmt::Debug,
+) -> Result<(), rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "UPDATE settings
+        SET value = :value
+        WHERE name == :name
+        RETURNING true", // dummy value to retrieve whether the update happened or we were lied to
+    )?;
+    let mut query = statement.query(named_params! {
+        ":name": name.as_ref(),
+        ":value": value,
+    })?;
+
+    match query.next()? {
+        None => panic!(
+            "expected '{:?}' to exist to insert '{:?}', found nothing in database",
+            name.as_ref(),
+            value,
+        ),
+        Some(_) => Ok(()),
+    }
 }
