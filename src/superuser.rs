@@ -20,7 +20,22 @@ use {
 };
 
 #[get("/superuser")]
-pub async fn panel(
+pub async fn panel(flash: Option<FlashMessage<'_>>, _superuser: Superuser) -> Template {
+    #[derive(Debug, Serialize)]
+    struct Context {
+        flash: Option<String>,
+    }
+
+    Template::render(
+        "superuser-panel",
+        &Context {
+            flash: flash.map(|flash| flash.message().to_string()),
+        },
+    )
+}
+
+#[get("/drives")]
+pub async fn drives_panel(
     conn: BususagesDBConn,
     flash: Option<FlashMessage<'_>>,
     _superuser: Superuser,
@@ -39,7 +54,7 @@ pub async fn panel(
         upcoming_drives: Vec<TemplateDrive>,
     }
 
-    let drives = match conn.run(move |c| sql_interface::list_drives(c)).await {
+    let drives = match conn.run(sql_interface::list_drives).await {
         Err(err) => {
             return Err(server_error(
                 &format!("Error while listing drives: {}", err),
@@ -66,7 +81,7 @@ pub async fn panel(
         .collect();
 
     Ok(Template::render(
-        "superuser-panel",
+        "drives-panel",
         &Context {
             flash: flash.map(|flash| flash.message().to_string()),
             upcoming_drives,
@@ -76,7 +91,7 @@ pub async fn panel(
 }
 
 #[get("/drive/list?<date>")]
-pub async fn list(
+pub async fn introspect_drive(
     conn: BususagesDBConn,
     date: time::Date,
     _superuser: Superuser,
@@ -131,7 +146,7 @@ pub async fn create_new_drive(
         .await
     {
         Err(InsertDriveError::AlreadyExists) => Err(Flash::error(
-            Redirect::to(uri!(panel)),
+            Redirect::to(uri!(drives_panel)),
             "Bus drive already exists!",
         )),
         Err(err) => {
@@ -140,7 +155,7 @@ pub async fn create_new_drive(
                 "an error occured while inserting a new drive",
             ))
         }
-        _ => Ok(Redirect::to(uri!(panel))),
+        _ => Ok(Redirect::to(uri!(drives_panel))),
     }
 }
 
@@ -158,7 +173,7 @@ pub async fn delete_drive(
     let drive_id = form.id;
     conn.run(move |c| sql_interface::delete_drive(c, drive_id))
         .await
-        .map(|_| Redirect::to(uri!(panel)))
+        .map(|_| Redirect::to(uri!(drives_panel)))
         .map_err(|err| {
             server_error(
                 &format!(
