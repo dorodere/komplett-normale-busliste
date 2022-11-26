@@ -220,6 +220,7 @@ fn rocket() -> _ {
                 superuser::delete_person,
                 superuser::introspect_person,
                 superuser::register_person,
+                superuser::settings,
                 authflow::index,
                 authflow::login,
                 authflow::verify_token

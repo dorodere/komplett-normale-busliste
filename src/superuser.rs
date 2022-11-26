@@ -482,3 +482,17 @@ pub async fn register_person(
     let id = registration.id;
     Ok(Redirect::to(uri!(introspect_person(id = id))))
 }
+
+#[get("/settings")]
+pub async fn settings(
+    conn: BususagesDBConn,
+    _superuser: Superuser,
+) -> Result<Template, Flash<Redirect>> {
+    let settings = conn.run(sql_interface::all_settings).await.map_err(|err| {
+        server_error(
+            format!("Error while fetching current setting values: {}", err),
+            "ein Fehler trat während des Abfragen der Werte der aktuellen Einstellungen auf",
+        )
+    })?;
+    Ok(Template::render("settings", settings))
+}

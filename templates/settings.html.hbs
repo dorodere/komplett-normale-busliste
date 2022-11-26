@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Settings - Komplett normale Busliste</title>
+		<link href="/static/style.css" rel="stylesheet"/>
+		<link href="/static/settings.css" rel="stylesheet"/>
+	</head>
+	<body>
+        <h1>Settings</h1>
+        <form action="/superuser" method="get">
+            <button>Back to superuser panel</button>
+        </form>
+
+        {{#if flash}}
+            <p class="flash">{{flash}}</p>
+        {{/if}}
+
+        <div class="settings functionality-section">
+            <h2>Login message</h2>
+            <p>Which custom message to display on the login front page.</p>
+            <form action="/settings/set" method="post">
+                <input type="hidden" name="name" value="login-message"/>
+                <input type="text" name="value" value="{{login-message}}"/>
+            </form>
+        </div>
+    </body>
+</html>

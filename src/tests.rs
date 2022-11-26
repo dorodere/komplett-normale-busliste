@@ -148,12 +148,15 @@ fn settings() {
 
     let retrieved = sql_interface::get_setting(&mut conn, "login-message").unwrap();
 
-    if let Value::Text(content) = retrieved.value {
+    if let Value::Text(content) = retrieved {
         assert_eq!(content, very_special_message);
     } else {
         panic!(
             "login message stored in database wasn't a text, but rather {:?}",
-            retrieved.value
+            retrieved
         );
     }
+
+    let all_settings = sql_interface::all_settings(&mut conn).unwrap();
+    assert_eq!(all_settings["login-message"], very_special_message);
 }

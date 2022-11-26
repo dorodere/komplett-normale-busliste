@@ -11,6 +11,10 @@
 			<button>Back to superuser panel</button>
 		</form>
 
+		{{#if flash}}
+			<p class="flash">{{flash}}</p>
+		{{/if}}
+
 		<div class="functionality-section">
 			<h2>Issue new drives</h2>
 			<p>Here you can issue new drives, which then can all other users register to. <b>A user cannot register to a non-existent drive.</b><p>

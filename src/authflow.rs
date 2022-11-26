@@ -49,7 +49,7 @@ pub async fn index(
                 "ein Fehler trat auf, während ich nach den Einstellungen geschaut habe",
             )
         })?;
-    let login_message = sql_interface::stringify_value(login_message.value);
+    let login_message = sql_interface::stringify_value(login_message);
 
     Ok(Template::render(
         "login",

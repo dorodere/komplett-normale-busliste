@@ -5,7 +5,7 @@ use {
     rocket_sync_db_pools::rusqlite,
     rusqlite::{named_params, types::Type, types::Value, ToSql},
     serde::{Deserialize, Serialize},
-    std::{fmt, time::Duration},
+    std::{collections::BTreeMap, fmt, time::Duration},
     thiserror::Error,
 };
 
@@ -580,17 +580,29 @@ pub fn delete_person(
     Ok(())
 }
 
-pub struct Setting {
-    pub description: String,
-    pub value: Value,
+/// Lists _all_ settings currently held, and uses [`stringify_value`] the values.
+pub fn all_settings(
+    conn: &mut rusqlite::Connection,
+) -> Result<BTreeMap<String, String>, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT name, value
+        FROM settings",
+    )?;
+
+    let settings = statement
+        .query_map([], |row| Ok((row.get(0)?, stringify_value(row.get(1)?))))?
+        .collect();
+
+    settings
 }
 
+/// Retrieves a setting stored in the database.
 pub fn get_setting(
     conn: &mut rusqlite::Connection,
     name: impl AsRef<str>,
-) -> Result<Setting, rusqlite::Error> {
+) -> Result<Value, rusqlite::Error> {
     let mut statement = conn.prepare(
-        "SELECT description, value
+        "SELECT value
         FROM settings
         WHERE name == :name",
     )?;
@@ -606,14 +618,10 @@ pub fn get_setting(
         )
     });
 
-    let setting = Setting {
-        description: row.get(0)?,
-        value: row.get(1)?,
-    };
-
-    Ok(setting)
+    Ok(row.get(0)?)
 }
 
+/// Updates a setting stored in the database.
 pub fn set_setting(
     conn: &mut rusqlite::Connection,
     name: impl AsRef<str>,
@@ -624,6 +632,8 @@ pub fn set_setting(
         SET value = :value
         WHERE name == :name
         RETURNING true", // dummy value to retrieve whether the update happened or we were lied to
+                         // TODO: .execute returns a usize saying how many rows have been modified,
+                         // could use that instead
     )?;
     let mut query = statement.query(named_params! {
         ":name": name.as_ref(),
