@@ -618,7 +618,7 @@ pub fn get_setting(
         )
     });
 
-    Ok(row.get(0)?)
+    row.get(0)
 }
 
 /// Updates a setting stored in the database.

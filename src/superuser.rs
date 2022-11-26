@@ -496,3 +496,43 @@ pub async fn settings(
     })?;
     Ok(Template::render("settings", settings))
 }
+
+#[derive(FromForm, Debug, Clone)]
+pub struct Setting {
+    name: String,
+    value: String,
+}
+
+#[post("/settings/set", data = "<update>")]
+pub async fn set_setting(
+    conn: BususagesDBConn,
+    update: Form<Strict<Setting>>,
+    _superuser: Superuser,
+) -> Result<Redirect, Flash<Redirect>> {
+    // probably want to perform some additional validation here for new settings, but for now this is fine
+    if !matches!(update.name.as_ref(), "login-message") {
+        return Err(server_error(
+            format!(
+                "User wanted to set setting '{}' to '{}', which doesn't even exist",
+                update.name, update.value
+            ),
+            "ein Fehler trat während des Setzens der Einstellung auf",
+        ));
+    }
+
+    // working around ownership, we need the update later on in case of error reporting
+    let cloned_update = update.clone();
+    conn.run(move |c| sql_interface::set_setting(c, cloned_update.name, cloned_update.value))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while setting '{}' to '{}': {}",
+                    update.name, update.value, err
+                ),
+                "ein Fehler trat während des Updates der Einstellung auf",
+            )
+        })?;
+
+    Ok(Redirect::to(uri!(settings)))
+}
