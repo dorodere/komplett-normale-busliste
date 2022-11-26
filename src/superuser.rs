@@ -16,6 +16,7 @@ use {
         response::{Flash, Redirect},
     },
     rocket_dyn_templates::Template,
+    rusqlite::types::Value,
     serde::Serialize,
 };
 
@@ -510,19 +511,31 @@ pub async fn set_setting(
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     // probably want to perform some additional validation here for new settings, but for now this is fine
-    if !matches!(update.name.as_ref(), "login-message") {
-        return Err(server_error(
-            format!(
-                "User wanted to set setting '{}' to '{}', which doesn't even exist",
-                update.name, update.value
-            ),
-            "ein Fehler trat während des Setzens der Einstellung auf",
-        ));
-    }
+    let value = match update.name.as_ref() {
+        "login-message" => Value::Text(update.value.clone()),
+        "default-deadline" => match (update.value.len(), update.value.chars().next()) {
+            (0, None) => Value::Null,
+            (1, Some('0'..='6')) => Value::Integer(update.value.parse().unwrap()),
+            _ => {
+                return Err(server_error(
+                    format!("User wanted to set default deadline to '{}', which is invalid (validation/UI out of sync?)", update.value),
+                    "ein Fehler trat während der Anwendung der Default-Deadline auf",
+                ))
+            }
+        },
+        _ => {
+            return Err(server_error(
+                format!(
+                    "User wanted to set setting '{}' to '{}', which isn't validated for (but may exist in the database, in that case validation + database are out of sync)",
+                    update.name, update.value
+                ),
+                "ein Fehler trat während des Setzens der Einstellung auf",
+            ));
+        }
+    };
+    let name = update.name.clone();
 
-    // working around ownership, we need the update later on in case of error reporting
-    let cloned_update = update.clone();
-    conn.run(move |c| sql_interface::set_setting(c, cloned_update.name, cloned_update.value))
+    conn.run(move |c| sql_interface::set_setting(c, name, value))
         .await
         .map_err(|err| {
             server_error(

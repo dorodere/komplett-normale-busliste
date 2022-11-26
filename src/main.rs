@@ -21,7 +21,7 @@ use {
         request::FlashMessage,
         response::{Flash, Redirect},
     },
-    rocket_dyn_templates::Template,
+    rocket_dyn_templates::{handlebars::handlebars_helper, Template},
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
     sql_interface::{ApplyRegistrationError, SearchRegistrationsBy},
@@ -198,6 +198,10 @@ fn rocket() -> _ {
             engines
                 .handlebars
                 .register_escape_fn(|input| ammonia::clean_text(input));
+
+            handlebars_helper!(equals: |left_hand: String, right_hand: String| left_hand == right_hand);
+
+            engines.handlebars.register_helper("equals", Box::new(equals));
         }))
         .attach(AdHoc::config::<config::Config>())
         .attach(BususagesDBConn::fairing())

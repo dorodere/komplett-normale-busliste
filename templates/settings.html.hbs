@@ -25,5 +25,24 @@
                 <button style="margin-top: 1em;">Apply changes</button>
             </form>
         </div>
+
+        <div class="settings functionality-section">
+            <h2>Default deadline</h2>
+            <p>At the end of what weekday the default deadline is on. None means there is no "regular" deadline, registrations are possible until the day of the drive.</p>
+            <form action="/settings/set" method="post">
+                <input type="hidden" name="name" value="default-deadline"/>
+                <select name="value">
+                    <option value="" {{#if (equals default-deadline "")}} selected {{/if}}>None</option>
+                    <option value="0" {{#if (equals default-deadline "0")}} selected {{/if}}>Monday</option>
+                    <option value="1" {{#if (equals default-deadline "1")}} selected {{/if}}>Tuesday</option>
+                    <option value="2" {{#if (equals default-deadline "2")}} selected {{/if}}>Wednesday</option>
+                    <option value="3" {{#if (equals default-deadline "3")}} selected {{/if}}>Thursday</option>
+                    <option value="4" {{#if (equals default-deadline "4")}} selected {{/if}}>Friday</option>
+                    <option value="5" {{#if (equals default-deadline "5")}} selected {{/if}}>Saturday</option>
+                    <option value="6" {{#if (equals default-deadline "6")}} selected {{/if}}>Sunday</option>
+                </select>
+                <button style="margin-left: 1em;">Set as default</button>
+            </form>
+        </div>
     </body>
 </html>

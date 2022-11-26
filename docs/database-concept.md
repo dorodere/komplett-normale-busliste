@@ -48,8 +48,9 @@ As a such, I think the class diagram of `person` should look like this:
 The table `drive` contains the dates on which the bus drives at all. This
 is done in order to check if a registration in `registraton` can be valid at
 all: There is no point in registering to drive if the bus doesn't drive on that
-day. Since it's task is to just hold on which dates a registration is okay, it
-only consists out of two columns, `date` and `id`:
+day. Since it's task is to just hold on which dates a registration is okay and
+when its final registration opportunity is, it only consists out of three
+columns, date, id and deadline:
 
 ```text
 +--------------------------------------+
@@ -57,6 +58,7 @@ only consists out of two columns, `date` and `id`:
 +--------------------------------------+
 |    drive_id INTEGER (primary key)    |
 |            drivedate DATE          --|--- unique
+|           deadline INTEGER           |
 +--------------------------------------+
 ```
 
@@ -88,16 +90,15 @@ To conclude, the class diagram might be this:
 ### `settings`
 
 This is not really related to the main functionality of the application, but
-rather just a key-value table alongside with descriptions. There's some
-instance-specific options which still need to be configurable by the end-user
-though, and this table holds exactly those, being mostly static.
+rather just a key-value table. There's some instance-specific options which
+still need to be configurable by the end-user though, and this table holds
+exactly those, being mostly static.
 
 ```
 +--------------------------------------+
 |               settings               |
 +--------------------------------------+
 |       name TEXT (primary key)        |
-|           description TEXT           |
 |           value (untyped)            |
 +--------------------------------------+
 ```
