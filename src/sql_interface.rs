@@ -464,6 +464,23 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<Vec<Drive>, rusqli
     result.collect()
 }
 
+pub fn get_drive_deadline(
+    conn: &mut rusqlite::Connection,
+    date: chrono::NaiveDate,
+) -> Result<Option<chrono::NaiveDateTime>, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT deadline
+        FROM drive
+        WHERE drivedate == :date",
+    )?;
+    let mut query = statement.query(named_params! {
+        ":date": date
+    })?;
+
+    let row = query.next()?.unwrap();
+    row.get(0)
+}
+
 #[derive(Debug, Error)]
 pub enum InsertDriveError {
     #[error("Database or query error: {0}")]

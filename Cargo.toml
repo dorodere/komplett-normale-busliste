@@ -28,7 +28,7 @@ features = ["alloc"]
 
 [dependencies.chrono]
 version = "0.4"
-features = ["serde"]
+features = ["serde", "clock"]
 
 [dependencies.figment]
 version = "0.10"

@@ -160,11 +160,31 @@ async fn register(
     user: User,
     registration: Form<Strict<Registration>>,
 ) -> Result<Redirect, Flash<Redirect>> {
-    let now = time::OffsetDateTime::now_utc().date();
-    if registration.date <= now {
+    let query_date = time_to_chrono_date(registration.date);
+    let deadline = conn
+        .run(move |c| sql_interface::get_drive_deadline(c, query_date))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while querying drive deadline for '{}': {}",
+                    registration.date, err
+                ),
+                "ein Fehler trat während des Abfragens der Anmeldungsdeadline auf",
+            )
+        })?
+        .unwrap_or_else(|| {
+            time_to_chrono_date(registration.date)
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        });
+
+    let now = Utc::now().naive_utc();
+
+    if deadline <= now {
         return Err(Flash::error(
             Redirect::to(uri!(dashboard)),
-            "Du kannst deine Anmeldung nicht mehr am Tag der Fahrt und danach ändern.",
+            "Die Deadline für diese Fahrt ist bereits abgelaufen.",
         ));
     }
 
@@ -181,7 +201,7 @@ async fn register(
         }
         Err(err) => {
             return Err(server_error(
-                &format!("Error while updating registration: {}", err),
+                format!("Error while updating registration: {}", err),
                 "ein Fehler trat während der Aktualisierung der Anmeldung auf",
             ))
         }
