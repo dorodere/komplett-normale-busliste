@@ -216,6 +216,7 @@ fn rocket() -> _ {
                 superuser::drives_panel,
                 superuser::create_new_drive,
                 superuser::delete_drive,
+                superuser::update_deadline,
                 superuser::introspect_drive,
                 superuser::registrations_panel,
                 superuser::person_panel,

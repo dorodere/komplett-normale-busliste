@@ -1,7 +1,7 @@
 use {
     super::{
         authflow::Superuser,
-        date_helpers::{figure_out_exact_deadline, time_to_chrono_date},
+        date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
         format_date, server_error,
         sql_interface::{
             self, Filter, InsertDriveError, Person, Registration, SearchPersonBy,
@@ -45,6 +45,7 @@ pub async fn drives_panel(
     struct TemplateDrive {
         date: chrono::NaiveDate,
         pretty_date: String,
+        deadline: Option<chrono::NaiveDateTime>,
         id: i64,
     }
 
@@ -69,6 +70,7 @@ pub async fn drives_panel(
         .map(|d| TemplateDrive {
             pretty_date: super::format_date(d.date),
             date: d.date,
+            deadline: d.deadline,
             id: d.id,
         })
         .collect();
@@ -204,6 +206,42 @@ pub async fn delete_drive(
                     err, drive_id
                 ),
                 "an error occured while deleting drive",
+            )
+        })
+}
+
+#[derive(FromForm, Debug)]
+pub struct UpdateDeadline {
+    id: i64,
+    deadline: time::PrimitiveDateTime,
+}
+
+#[post("/drive/deadline/update", data = "<update>")]
+pub async fn update_deadline(
+    conn: BususagesDBConn,
+    update: Option<Form<Strict<UpdateDeadline>>>,
+    _superuser: Superuser,
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
+    let Some(update) = update else {
+        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Invalid date selected."));
+    };
+
+    let update = sql_interface::UpdateDeadline {
+        id: update.id,
+        deadline: Some(time_to_chrono_datetime(update.deadline)),
+    };
+
+    let closure_update = update.clone();
+    conn.run(move |c| sql_interface::update_drive_deadline(c, closure_update))
+        .await
+        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Deadline angepasst."))
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while updating drive {} to deadline {:?}: {}",
+                    update.id, update.deadline, err,
+                ),
+                "ein Fehler trat während der Aktualisierung der Deadline auf",
             )
         })
 }

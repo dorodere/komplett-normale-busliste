@@ -32,6 +32,16 @@ pub fn time_to_chrono_date(time_date: time::Date) -> chrono::NaiveDate {
     chrono::NaiveDate::from_isoywd_opt(iso_date.0, u32::from(iso_date.1), chrono_weekday).unwrap()
 }
 
+pub fn time_to_chrono_datetime(time_datetime: time::PrimitiveDateTime) -> chrono::NaiveDateTime {
+    time_to_chrono_date(time_datetime.date())
+        .and_hms_opt(
+            u32::from(time_datetime.hour()),
+            u32::from(time_datetime.minute()),
+            u32::from(time_datetime.second()),
+        )
+        .unwrap()
+}
+
 pub fn format_date(date: chrono::NaiveDate) -> String {
     date.format("%A, %d.%m.%Y").to_string()
 }

@@ -1,5 +1,5 @@
 ALTER TABLE drive
-ADD COLUMN deadline INTEGER DEFAULT null;
+ADD COLUMN deadline DATETIME DEFAULT null;
 
 INSERT INTO settings(name, value)
 VALUES (

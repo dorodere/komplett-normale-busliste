@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS person(
 CREATE TABLE IF NOT EXISTS drive(
     drive_id INTEGER,
     drivedate DATE NOT NULL,
-    deadline INTEGER,
+    deadline DATETIME,
     UNIQUE(drivedate),
     PRIMARY KEY (drive_id AUTOINCREMENT)
 );

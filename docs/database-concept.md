@@ -58,7 +58,7 @@ columns, date, id and deadline:
 +--------------------------------------+
 |    drive_id INTEGER (primary key)    |
 |            drivedate DATE          --|--- unique
-|           deadline INTEGER           |
+|          deadline DATETIME           |
 +--------------------------------------+
 ```
 

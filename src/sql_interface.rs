@@ -93,6 +93,7 @@ fn row_to_person(row: &rusqlite::Row) -> rusqlite::Result<Person> {
 pub struct Drive {
     pub id: i64,
     pub date: chrono::NaiveDate,
+    pub deadline: Option<chrono::NaiveDateTime>,
 }
 
 /// How a person uses the bus on a specfic date.
@@ -452,14 +453,15 @@ pub fn update_token(
 }
 
 pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<Vec<Drive>, rusqlite::Error> {
-    let mut statement = conn.prepare("SELECT drive_id, drivedate FROM drive")?;
+    let mut statement = conn.prepare("SELECT drive_id, drivedate, deadline FROM drive")?;
     let result = statement.query_map([], |row| {
         Ok(Drive {
             id: row.get(0)?,
             date: row.get(1)?,
+            deadline: row.get(2)?,
         })
     })?;
-    Ok(result.map(Result::unwrap).collect())
+    result.collect()
 }
 
 #[derive(Debug, Error)]
@@ -500,6 +502,29 @@ pub fn delete_drive(conn: &mut rusqlite::Connection, id: i64) -> Result<(), rusq
         },
     )?;
     Ok(())
+}
+
+#[derive(Clone)]
+pub struct UpdateDeadline {
+    pub id: i64,
+    pub deadline: Option<chrono::NaiveDateTime>,
+}
+
+/// Updates when a drive's last registration opportunity (= "deadline") is.
+pub fn update_drive_deadline(
+    conn: &mut rusqlite::Connection,
+    update: UpdateDeadline,
+) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "UPDATE drive
+        SET deadline = :deadline
+        WHERE drive_id == :id",
+        named_params! {
+            ":deadline": update.deadline,
+            ":id": update.id,
+        },
+    )
+    .map(|_| ())
 }
 
 #[derive(Debug, Error)]
