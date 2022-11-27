@@ -1,7 +1,7 @@
 use {
     super::{
         authflow::Superuser,
-        date_helpers::time_to_chrono_date,
+        date_helpers::{figure_out_exact_deadline, time_to_chrono_date},
         format_date, server_error,
         sql_interface::{
             self, Filter, InsertDriveError, Person, Registration, SearchPersonBy,
@@ -141,9 +141,31 @@ pub async fn create_new_drive(
     form: Form<Strict<NewDrive>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
-    let date = time_to_chrono_date(form.date);
+    let drive_date = time_to_chrono_date(form.date);
+
+    let default_deadline = conn
+        .run(|c| sql_interface::get_setting(c, "default-deadline"))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!("Error querying default deadline: {}", err),
+                "ein Fehler trat auf, während ich nach den Einstellungen geschaut habe",
+            )
+        })?;
+    let deadline = match default_deadline {
+        Value::Integer(deadline_weekday) => Some(figure_out_exact_deadline(
+            deadline_weekday as u32,
+            drive_date,
+        )),
+        Value::Null => None,
+        _ => unreachable!(
+            "validation messed up, contained '{:?}' which is not an integer nor null",
+            default_deadline
+        ),
+    };
+
     match conn
-        .run(move |c| sql_interface::insert_new_drive(c, date))
+        .run(move |c| sql_interface::insert_new_drive(c, drive_date, deadline))
         .await
     {
         Err(InsertDriveError::AlreadyExists) => Err(Flash::error(
@@ -152,7 +174,7 @@ pub async fn create_new_drive(
         )),
         Err(err) => {
             return Err(server_error(
-                &format!("Error inserting new drive: {}\nDate: {:?}", err, date),
+                format!("Error inserting new drive: {}\nDate: {:?}", err, drive_date),
                 "an error occured while inserting a new drive",
             ))
         }
@@ -487,14 +509,21 @@ pub async fn register_person(
 #[get("/settings")]
 pub async fn settings(
     conn: BususagesDBConn,
+    flash: Option<FlashMessage<'_>>,
     _superuser: Superuser,
 ) -> Result<Template, Flash<Redirect>> {
-    let settings = conn.run(sql_interface::all_settings).await.map_err(|err| {
+    let mut settings = conn.run(sql_interface::all_settings).await.map_err(|err| {
         server_error(
             format!("Error while fetching current setting values: {}", err),
             "ein Fehler trat während des Abfragen der Werte der aktuellen Einstellungen auf",
         )
     })?;
+    settings.insert(
+        "flash".to_string(),
+        flash
+            .map(|flash| flash.message().to_string())
+            .unwrap_or_else(|| "".to_string()),
+    );
     Ok(Template::render("settings", settings))
 }
 
@@ -509,7 +538,7 @@ pub async fn set_setting(
     conn: BususagesDBConn,
     update: Form<Strict<Setting>>,
     _superuser: Superuser,
-) -> Result<Redirect, Flash<Redirect>> {
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
     // probably want to perform some additional validation here for new settings, but for now this is fine
     let value = match update.name.as_ref() {
         "login-message" => Value::Text(update.value.clone()),
@@ -547,5 +576,8 @@ pub async fn set_setting(
             )
         })?;
 
-    Ok(Redirect::to(uri!(settings)))
+    Ok(Flash::success(
+        Redirect::to(uri!(settings)),
+        "Einstellung angewandt.",
+    ))
 }

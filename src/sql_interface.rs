@@ -475,13 +475,15 @@ pub enum InsertDriveError {
 pub fn insert_new_drive(
     conn: &mut rusqlite::Connection,
     date: chrono::NaiveDate,
+    deadline: Option<chrono::NaiveDateTime>,
 ) -> Result<(), InsertDriveError> {
     match_constraint_violation!(
         conn.execute(
-            "INSERT INTO drive (drivedate)
-            VALUES (:date)",
+            "INSERT INTO drive (drivedate, deadline)
+            VALUES (:date, :deadline)",
             named_params! {
                 ":date": date,
+                ":deadline": deadline,
             },
         ),
         InsertDriveError::AlreadyExists
