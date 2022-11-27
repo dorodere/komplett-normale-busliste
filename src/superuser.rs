@@ -4,8 +4,8 @@ use {
         date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
         format_date, server_error,
         sql_interface::{
-            self, Filter, InsertDriveError, Person, Registration, SearchPersonBy,
-            SearchRegistrationsBy,
+            self, DeadlineFilter, InsertDriveError, Person, Registration, SearchPersonBy,
+            SearchRegistrationsBy, VisibilityFilter,
         },
         BususagesDBConn,
     },
@@ -15,7 +15,7 @@ use {
         request::FlashMessage,
         response::{Flash, Redirect},
     },
-    rocket_dyn_templates::Template,
+    rocket_dyn_templates::{context, Template},
     rusqlite::types::Value,
     serde::Serialize,
 };
@@ -265,7 +265,7 @@ pub async fn person_panel(
     }
 
     let persons = conn
-        .run(|c| sql_interface::list_all_persons(c, Filter::IncludingInvisible))
+        .run(|c| sql_interface::list_all_persons(c, VisibilityFilter::IncludingInvisible))
         .await
         .map_err(|err| {
             server_error(
@@ -439,27 +439,20 @@ pub async fn introspect_person(
         registration: sql_interface::Registration,
     }
 
-    #[derive(Debug, Serialize)]
-    struct Context {
-        prename: String,
-        name: String,
-        registrations: Vec<TemplateRegistration>,
-    }
-
     let registrations = conn
         .run(move |c| {
             sql_interface::search_registrations(
                 c,
                 &SearchRegistrationsBy::PersonId {
                     id,
-                    ignore_past: false,
+                    filter: DeadlineFilter::ListAll,
                 },
             )
         })
         .await
         .map_err(|err| {
             server_error(
-                &format!(
+                format!(
                     "Error occurred while introspecting {} (registration search): {}",
                     id, err
                 ),
@@ -472,7 +465,7 @@ pub async fn introspect_person(
         .await
         .map_err(|err| {
             server_error(
-                &format!(
+                format!(
                     "Error occurred while introspecting {} (name search): {}",
                     id, err
                 ),
@@ -480,7 +473,7 @@ pub async fn introspect_person(
             )
         })?;
 
-    let registrations = registrations
+    let registrations: Vec<_> = registrations
         .into_iter()
         .map(|r| TemplateRegistration {
             pretty_date: format_date(r.date),
@@ -490,7 +483,7 @@ pub async fn introspect_person(
 
     Ok(Template::render(
         "personintrospect",
-        Context {
+        context! {
             prename: person.prename,
             name: person.name,
             registrations,

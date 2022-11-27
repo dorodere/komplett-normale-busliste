@@ -153,13 +153,19 @@ pub fn init_db_if_necessary(
     }
 }
 
+pub enum DeadlineFilter {
+    OnlyAccessible,
+    OnlyLocked,
+    ListAll,
+}
+
 pub enum SearchRegistrationsBy {
     /// Searches the registrations by date. All persons are included, regardless of whether they
     /// registered or not.
     Date(chrono::NaiveDate),
 
     /// Searches the registrations by person id.
-    PersonId { id: i64, ignore_past: bool },
+    PersonId { id: i64, filter: DeadlineFilter },
 }
 
 /// Creates a vector of [`Registration`]s filtered by the given criteria.
@@ -182,9 +188,7 @@ pub fn search_registrations(
             WHERE person.is_visible
             ORDER BY person.name",
         ),
-        SearchRegistrationsBy::PersonId {
-            ignore_past: false, ..
-        } => conn.prepare(
+        SearchRegistrationsBy::PersonId { filter, .. } => conn.prepare(&format!(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
                 registration.registered, drive.drivedate
             FROM drive
@@ -193,36 +197,30 @@ pub fn search_registrations(
                 registration.drive_id == drive.drive_id
                 AND registration.person_id == person.person_id
             )
+            {}
             ORDER BY person.name",
-        ),
-        SearchRegistrationsBy::PersonId {
-            ignore_past: true, ..
-        } => conn.prepare(
-            "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, drive.drivedate
-            FROM drive
-            LEFT OUTER JOIN person ON (person.person_id == :id)
-            LEFT OUTER JOIN registration ON (
-                registration.drive_id == drive.drive_id
-                AND registration.person_id == person.person_id
-            )
-            WHERE drive.drivedate >= :now
-            ORDER BY person.name",
-        ),
+            match filter {
+                DeadlineFilter::OnlyAccessible =>
+                    "WHERE :now < drive.deadline AND :now < drive.drivedate",
+                DeadlineFilter::OnlyLocked =>
+                    "WHERE drive.deadline <= :now OR drive.drivedate <= :now",
+                DeadlineFilter::ListAll => "",
+            },
+        )),
     }?;
     let rows = match by {
         SearchRegistrationsBy::Date(date) => statement.query(named_params! { ":date": date }),
         SearchRegistrationsBy::PersonId {
             id,
-            ignore_past: false,
-        } => statement.query(named_params! { ":id": id }),
-        SearchRegistrationsBy::PersonId {
-            id,
-            ignore_past: true,
+            filter: DeadlineFilter::OnlyLocked | DeadlineFilter::OnlyAccessible,
         } => {
-            let now = Utc::now().naive_local().date();
+            let now = Utc::now().naive_utc().date();
             statement.query(named_params! { ":id": id, ":now": now })
         }
+        SearchRegistrationsBy::PersonId {
+            id,
+            filter: DeadlineFilter::ListAll,
+        } => statement.query(named_params! { ":id": id }),
     }?;
     Ok(rows
         .mapped(|row| {
@@ -397,7 +395,7 @@ pub fn search_person(
     }
 }
 
-pub enum Filter {
+pub enum VisibilityFilter {
     IncludingInvisible,
     #[allow(unused)]
     OnlyVisible,
@@ -408,7 +406,7 @@ pub enum Filter {
 /// Doesn't include token, token expiration and superuser state (you know it anyways).
 pub fn list_all_persons(
     conn: &mut rusqlite::Connection,
-    filter: Filter,
+    filter: VisibilityFilter,
 ) -> rusqlite::Result<Vec<Person>> {
     let mut statement = conn.prepare(&format!(
         "SELECT person_id, prename, name, email, is_visible
@@ -416,8 +414,8 @@ pub fn list_all_persons(
         {}
         ORDER BY name",
         match filter {
-            Filter::OnlyVisible => "WHERE is_visible",
-            Filter::IncludingInvisible => "",
+            VisibilityFilter::OnlyVisible => "WHERE is_visible",
+            VisibilityFilter::IncludingInvisible => "",
         }
     ))?;
     let persons = statement

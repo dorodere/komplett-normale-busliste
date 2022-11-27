@@ -21,10 +21,10 @@ use {
         request::FlashMessage,
         response::{Flash, Redirect},
     },
-    rocket_dyn_templates::{handlebars::handlebars_helper, Template},
+    rocket_dyn_templates::{context, handlebars::handlebars_helper, Template},
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
-    sql_interface::{ApplyRegistrationError, SearchRegistrationsBy},
+    sql_interface::{ApplyRegistrationError, DeadlineFilter, SearchRegistrationsBy},
     std::fmt,
 };
 
@@ -66,62 +66,51 @@ async fn dashboard(
         registration: sql_interface::Registration,
     }
 
-    #[derive(Debug, Serialize)]
-    struct Context {
-        flash: Option<String>,
-        past_regs: Vec<TemplateRegistration>,
-        future_regs: Vec<TemplateRegistration>,
-        show_superuser_controls: bool,
+    let mut registrations = [Vec::new(), Vec::new()];
+    let person_id = user.person_id();
+
+    for (i, filter) in [DeadlineFilter::OnlyAccessible, DeadlineFilter::OnlyLocked]
+        .into_iter()
+        .enumerate()
+    {
+        let from_db = conn
+            .run(move |c| {
+                sql_interface::search_registrations(
+                    c,
+                    &SearchRegistrationsBy::PersonId {
+                        id: person_id,
+                        filter,
+                    },
+                )
+            })
+            .await
+            .map_err(|err| {
+                server_error(
+                    format!("Error while loading registrations: {}", err),
+                    "an error occured while loading registrations",
+                )
+            })?;
+
+        let as_template = from_db
+            .into_iter()
+            .map(|registration| TemplateRegistration {
+                pretty_date: format_date(registration.date),
+                registration,
+            })
+            .collect();
+
+        registrations[i] = as_template;
     }
 
-    let registrations = match conn
-        .run(move |c| {
-            sql_interface::search_registrations(
-                c,
-                &SearchRegistrationsBy::PersonId {
-                    id: user.person_id(),
-                    ignore_past: false,
-                },
-            )
-        })
-        .await
-    {
-        Err(err) => {
-            return Err(server_error(
-                &format!("Error while loading registrations: {}", err),
-                "an error occured while loading registrations",
-            ))
-        }
-        Ok(x) => x,
-    };
-
     let flash = flash.map(|flashmsg| flashmsg.message().to_string());
-
-    let now = Utc::now().naive_local().date();
-    let mut past_regs = Vec::new();
-    let future_regs = registrations
-        .into_iter()
-        .filter_map(|r| {
-            let date = r.date;
-            let template_reg = TemplateRegistration {
-                pretty_date: format_date(date),
-                registration: r,
-            };
-            if date <= now {
-                past_regs.push(template_reg);
-                None
-            } else {
-                Some(template_reg)
-            }
-        })
-        .collect();
+    let [accessible_regs, locked_regs] = registrations;
 
     Ok(Template::render(
         "dashboard",
-        &Context {
+        context! {
             flash,
-            past_regs,
-            future_regs,
+            accessible_regs,
+            locked_regs,
             show_superuser_controls: superuser.is_some(),
         },
     ))
