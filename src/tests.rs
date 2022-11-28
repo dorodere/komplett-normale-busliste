@@ -1,6 +1,6 @@
 use {
     super::sql_interface::{
-        self, NewPerson, RegistrationUpdate,
+        self, Filter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
         UpdatePerson, VisibilityFilter,
