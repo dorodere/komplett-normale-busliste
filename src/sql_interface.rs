@@ -47,6 +47,9 @@ pub struct Person {
     /// Automatically set to false if it is not needed for the current query, like querying
     /// registrations themselves.
     pub is_superuser: bool,
+
+    /// Whether or not the person shows up in the registration list. They can log in regardless of this.
+    pub is_visible: bool,
 }
 
 // Note: Only usable in context here, since the columns are hardcoded
@@ -63,6 +66,7 @@ fn row_to_full_person(row: &rusqlite::Row) -> rusqlite::Result<Person> {
         token: row.get(4)?,
         token_expiration: row.get(5)?,
         is_superuser: row.get(6)?,
+        is_visible: row.get(7)?,
     })
 }
 
@@ -80,6 +84,7 @@ fn row_to_person(row: &rusqlite::Row) -> rusqlite::Result<Person> {
         token: None,
         token_expiration: None,
         is_superuser: false,
+        is_visible: row.get(4)?,
     })
 }
 
@@ -124,6 +129,7 @@ pub enum DatabaseStatus {
     Created,
 }
 
+#[allow(unused)]
 pub fn init_db_if_necessary(
     conn: &mut rusqlite::Connection,
 ) -> Result<DatabaseStatus, rusqlite::Error> {
@@ -164,7 +170,7 @@ pub fn search_registrations(
 ) -> Result<Vec<Registration>, rusqlite::Error> {
     let mut statement = match by {
         SearchRegistrationsBy::Date(_) => conn.prepare(
-            "SELECT person.person_id, person.prename, person.name, person.email,
+            "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
                 registration.registered, :date
             FROM person
             LEFT OUTER JOIN drive ON (drive.drivedate == :date)
@@ -172,12 +178,13 @@ pub fn search_registrations(
                 registration.person_id == person.person_id AND
                 registration.drive_id == drive.drive_id
             )
+            WHERE person.is_visible
             ORDER BY person.name",
         ),
         SearchRegistrationsBy::PersonId {
             ignore_past: false, ..
         } => conn.prepare(
-            "SELECT person.person_id, person.prename, person.name, person.email,
+            "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
                 registration.registered, drive.drivedate
             FROM drive
             LEFT OUTER JOIN person ON (person.person_id == :id)
@@ -190,7 +197,7 @@ pub fn search_registrations(
         SearchRegistrationsBy::PersonId {
             ignore_past: true, ..
         } => conn.prepare(
-            "SELECT person.person_id, person.prename, person.name, person.email,
+            "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
                 registration.registered, drive.drivedate
             FROM drive
             LEFT OUTER JOIN person ON (person.person_id == :id)
@@ -220,8 +227,8 @@ pub fn search_registrations(
         .mapped(|row| {
             Ok(Registration {
                 person: row_to_person(row)?,
-                registered: false_if_null(row.get(4))?,
-                date: row.get(5)?,
+                registered: false_if_null(row.get(5))?,
+                date: row.get(6)?,
             })
         })
         .map(Result::unwrap)
@@ -248,7 +255,7 @@ pub fn list_persons_counted_registrations(
     to: Option<chrono::NaiveDate>,
 ) -> Result<CountedRegistrations, rusqlite::Error> {
     let statement = format!(
-        "SELECT person.person_id, person.prename, person.name, person.email,
+        "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
           COUNT(registration.person_id)
         FROM drive, person
         LEFT OUTER JOIN registration ON (
@@ -275,7 +282,7 @@ pub fn list_persons_counted_registrations(
         .mapped(|row| {
             Ok(PersonWithRegistrations {
                 person: row_to_person(row)?,
-                count: row.get(4)?,
+                count: row.get(5)?,
             })
         })
         .map(Result::unwrap)
@@ -359,12 +366,12 @@ pub fn search_person(
 ) -> Result<Person, SearchPersonError> {
     let mut statement = match by {
         SearchPersonBy::Email(_) => conn.prepare(
-            "SELECT person_id, prename, name, email
+            "SELECT person_id, prename, name, email, is_visible
             FROM person
             WHERE email == :email",
         ),
         SearchPersonBy::Id(_) => conn.prepare(
-            "SELECT person_id, prename, name, email, token, token_expiration, is_superuser
+            "SELECT person_id, prename, name, email, token, token_expiration, is_superuser, is_visible
             FROM person
             WHERE person_id == :id",
         ),
@@ -389,16 +396,29 @@ pub fn search_person(
     }
 }
 
-/// Lists all persons except superusers.
+pub enum Filter {
+    IncludingInvisible,
+    #[allow(unused)]
+    OnlyVisible,
+}
+
+/// Lists all persons, optionally also invisible ones.
 ///
 /// Doesn't include token, token expiration and superuser state (you know it anyways).
-pub fn list_all_persons(conn: &mut rusqlite::Connection) -> rusqlite::Result<Vec<Person>> {
-    let mut statement = conn.prepare(
-        "SELECT person_id, prename, name, email
+pub fn list_all_persons(
+    conn: &mut rusqlite::Connection,
+    filter: Filter,
+) -> rusqlite::Result<Vec<Person>> {
+    let mut statement = conn.prepare(&format!(
+        "SELECT person_id, prename, name, email, is_visible
         FROM person
-        WHERE is_superuser == false OR person_id == 1
+        {}
         ORDER BY name",
-    )?;
+        match filter {
+            Filter::OnlyVisible => "WHERE is_visible",
+            Filter::IncludingInvisible => "",
+        }
+    ))?;
     let persons = statement
         .query_map([], row_to_person)?
         .map(Result::unwrap)
@@ -502,8 +522,8 @@ pub fn insert_new_person(
 ) -> Result<(), PersonCreationError> {
     match_constraint_violation!(
         conn.execute(
-            "INSERT INTO person (prename, name, email, is_superuser)
-            VALUES (:prename, :name, :email, false)",
+            "INSERT INTO person (prename, name, email, is_superuser, is_visible)
+            VALUES (:prename, :name, :email, false, true)",
             named_params! {
                 ":prename": person.prename,
                 ":name": person.name,
@@ -520,6 +540,7 @@ pub struct UpdatePerson {
     pub prename: String,
     pub name: String,
     pub email: Address,
+    pub is_visible: bool,
 }
 
 /// Updates a person entry by ID. The email is not checked for validity.
@@ -531,13 +552,14 @@ pub fn update_person(
     // omitting here
     conn.execute(
         "UPDATE person
-        SET prename = :prename, name = :name, email = :email
+        SET prename = :prename, name = :name, email = :email, is_visible = :is_visible
         WHERE person_id = :id",
         named_params! {
             ":id": person.id,
             ":prename": person.prename,
             ":name": person.name,
             ":email": person.email.to_string(),
+            ":is_visible": person.is_visible,
         },
     )?;
     Ok(())
@@ -550,7 +572,7 @@ pub fn delete_person(
 ) -> Result<(), rusqlite::Error> {
     conn.execute(
         "DELETE FROM person
-        WHERE person_id == :id AND is_superuser != true",
+        WHERE person_id == :id",
         named_params! {
             ":id": person_id,
         },

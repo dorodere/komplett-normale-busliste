@@ -4,13 +4,14 @@ use {
         date_helpers::time_to_chrono_date,
         format_date, server_error,
         sql_interface::{
-            self, InsertDriveError, Person, Registration, SearchPersonBy, SearchRegistrationsBy,
+            self, Filter, InsertDriveError, Person, Registration, SearchPersonBy,
+            SearchRegistrationsBy,
         },
         BususagesDBConn,
     },
     chrono::Utc,
     rocket::{
-        form::{Form, Strict},
+        form::{Form, Lenient, Strict},
         request::FlashMessage,
         response::{Flash, Redirect},
     },
@@ -188,7 +189,7 @@ pub async fn person_panel(
     }
 
     let persons = conn
-        .run(|c| sql_interface::list_all_persons(c))
+        .run(|c| sql_interface::list_all_persons(c, Filter::IncludingInvisible))
         .await
         .map_err(|err| {
             server_error(
@@ -284,6 +285,7 @@ pub struct UpdatePerson {
     prename: String,
     name: String,
     email: String,
+    is_visible: Lenient<bool>,
 }
 
 impl TryFrom<UpdatePerson> for sql_interface::UpdatePerson {
@@ -295,6 +297,7 @@ impl TryFrom<UpdatePerson> for sql_interface::UpdatePerson {
             prename: source.prename,
             name: source.name,
             email: source.email.parse()?,
+            is_visible: source.is_visible.into_inner(),
         })
     }
 }

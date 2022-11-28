@@ -16,6 +16,7 @@ use {
     lettre::{message::Mailbox, transport::smtp::authentication::Credentials, AsyncTransport},
     rand::Rng,
     rocket::{
+        config::Config as RocketConfig,
         form::{Form, Strict},
         http::{Cookie, CookieJar, Status},
         request::{FlashMessage, FromRequest, Outcome, Request},
@@ -24,7 +25,7 @@ use {
     },
     rocket_dyn_templates::Template,
     serde::{Deserialize, Serialize},
-    std::{collections::HashMap, time::Duration},
+    std::{collections::HashMap, fmt, time::Duration},
     thiserror::Error,
 };
 
@@ -63,7 +64,7 @@ enum SendMailError {
 
 /// Sends a login mail with the given credentials and mail server.
 async fn send_login_mail(
-    url: &str,
+    url: impl AsRef<str> + fmt::Debug + fmt::Display,
     from: lettre::Address,
     to: lettre::Address,
     password: &str,
@@ -119,16 +120,14 @@ fn construct_argon2_instance() -> Argon2<'static> {
 pub async fn login(
     conn: BususagesDBConn,
     config: &State<Config>,
-    mut login_details: Form<Strict<LoginForm>>,
+    login_details: Form<Strict<LoginForm>>,
 ) -> Result<Flash<Redirect>, Flash<Redirect>> {
     // strip and normalize a bit
-    login_details.email = login_details.email.trim().to_lowercase();
+    let login_email = login_details.email.trim().to_lowercase();
 
     // first try to find the email in the database
     let search_result = conn
-        .run(move |c| {
-            sql_interface::search_person(c, &SearchPersonBy::Email(login_details.email.clone()))
-        })
+        .run(move |c| sql_interface::search_person(c, &SearchPersonBy::Email(login_email)))
         .await;
     let person = match search_result {
         Err(SearchPersonError::NotFound) => {
@@ -149,42 +148,48 @@ pub async fn login(
     // second, generate the token
     let (raw_token, encoded_token) = generate_token();
     let url = uri!(
-        "http://192.168.110.141",
+        config.outside_address.clone(),
         verify_token(token = encoded_token, person_id = person.id)
     );
 
     // third, send the email to the search result
-    match send_login_mail(
-        &url.to_string(),
-        config.email.clone(),
-        person.email.clone(),
-        &config.email_creds,
-        &config.smtp_server,
-    )
-    .await
-    {
-        Err(SendMailError::LettreError(err)) => {
-            let (logmsg, flashmsg) = if err.is_permanent() {
-                (
-                    format!("Permanent SMTP error while sending email: {}", err),
-                    "ein permanenter Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
-                )
-            } else if err.is_transient() {
-                (
-                    format!("Transient SMTP error while sending email: {}", err),
-                    "ein temporärer Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
-                )
-            } else {
-                (
-                    format!("Error occured while trying to send email: {}", err),
-                    "ein Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
-                )
-            };
-            return Err(server_error(&logmsg, flashmsg));
+    // or if running in debug mode, just print the login link instead
+    let rocket_config = RocketConfig::figment();
+    if rocket_config.profile() == RocketConfig::DEBUG_PROFILE {
+        log::info!("login link: {}", url);
+        drop(url);
+    } else {
+        let send_mail_result = send_login_mail(
+            url.to_string(),
+            config.email.clone(),
+            person.email.clone(),
+            &config.email_creds,
+            &config.smtp_server,
+        );
+        match send_mail_result.await {
+            Err(SendMailError::LettreError(err)) => {
+                let (logmsg, flashmsg) = if err.is_permanent() {
+                    (
+                        format!("Permanent SMTP error while sending email: {}", err),
+                        "ein permanenter Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
+                    )
+                } else if err.is_transient() {
+                    (
+                        format!("Transient SMTP error while sending email: {}", err),
+                        "ein temporärer Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
+                    )
+                } else {
+                    (
+                        format!("Error occured while trying to send email: {}", err),
+                        "ein Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
+                    )
+                };
+                return Err(server_error(&logmsg, flashmsg));
+            }
+            Err(SendMailError::BuildError(err)) => panic!("{}", err),
+            _ => (),
         }
-        Err(SendMailError::BuildError(err)) => panic!("{}", err),
-        _ => (),
-    };
+    }
 
     // fourth, hash token and insert into DB
     let salt = SaltString::generate(rand::thread_rng());

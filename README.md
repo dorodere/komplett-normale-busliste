@@ -43,23 +43,16 @@ Thanks for considering doing so! You can take these steps:
    python scripts/init_db.py
    ```
 
-6. What follows is a bit ugly and will change for sure in the future, but you need to go into the
-   source code and tell komplett-normale-busliste not to send any login emails, but rather just echo
-   the login URL. You can do this with:
-
-   ```
-   git apply slightly-hacky-local-testing.patch
-   ```
-
-7. Compile, run and let's go!
+6. Compile, run and let's go!
 
    ```
    cargo run
    ```
 
-8. Now open your web browser at `http://127.0.0.1:8008`. In the email field you can enter
+7. Now open your web browser at `http://127.0.0.1:8008`. In the email field you can enter
    `john_doe@example.com`, hit enter, and click the link output in the console. You're logged in now
-   and can do whatever you want! (in your local testing instance)
+   and can do whatever you want! (in your local testing instance, komplett-normale-busliste knows
+   automatically not to really send the email when running in debug mode)
 
 <details>
 <summary markdown="span">Commands as one consistent block</summary>
