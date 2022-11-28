@@ -22,7 +22,7 @@ body {
 }
 
 .functionality-section h2 {
-	margin-top: -0.25em;
+	margin-top: 0.25em;
 }
 
 .nocolor {
@@ -35,7 +35,7 @@ body {
 
 .nocolor tbody tr td {
 	border: solid;
-	border-color: #A0A0A0;
+	border-color: #FFFCFD;
 	border-width: 1px;
 }
 
@@ -50,12 +50,26 @@ input {
 	padding-right: 8px;
 }
 
+a div {
+	animation: 0.5s button-dehover ease-in both;
+	background-color: #1D1D1D;
+}
+
+a:hover div {
+	animation: 0.19s button-hover ease-out both;
+}
+
+a {
+	color: #FFFCFD;
+	text-decoration: none;
+}
+
 button {
 	animation: 0.5s button-dehover ease-in both;
+	background-color: #1D1D1D;
 	width: auto;
 	border-style: none;
 	border-radius: 8px;
-	background-color: #1D1D1D;
 	color: inherit;
 	padding-top: 4px;
 	padding-bottom: 4px;
@@ -64,7 +78,7 @@ button {
 }
 
 button:hover {
-	animation: 0.2s button-hover ease-out both;
+	animation: 0.19s button-hover ease-out both;
 }
 
 p {
@@ -82,13 +96,15 @@ p {
 	}
 
 	to {
-		color: #A0A0A0;
+		color: #C1BEBF;
+		background-color: #161616;
 	}
 }
 
 @keyframes button-dehover {
 	from {
-		color: #A0A0A0;
+		color: #C1BEBF;
+		background-color: #161616;
 	}
 
 	to {

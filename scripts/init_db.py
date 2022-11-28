@@ -31,8 +31,8 @@ def init_database(filename: str = toplevel() / "testing-database.db"):
     cur.executescript(INIT_DB_SCRIPT)
 
     cur.execute(
-        """INSERT INTO person(prename, name, email, is_superuser)
-    VALUES ('John', 'Doe', 'john_doe@example.com', true)"""
+        """INSERT INTO person(prename, name, email, is_superuser, is_visible)
+    VALUES ('John', 'Doe', 'john_doe@example.com', true, true)"""
     )
 
     conn.commit()

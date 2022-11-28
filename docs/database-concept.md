@@ -85,6 +85,23 @@ To conclude, the class diagram might be this:
 +--------------------------------------+
 ```
 
+### `settings`
+
+This is not really related to the main functionality of the application, but
+rather just a key-value table alongside with descriptions. There's some
+instance-specific options which still need to be configurable by the end-user
+though, and this table holds exactly those, being mostly static.
+
+```
++--------------------------------------+
+|               settings               |
++--------------------------------------+
+|       name TEXT (primary key)        |
+|           description TEXT           |
+|           value (untyped)            |
++--------------------------------------+
+```
+
 ## Database layout
 
 The class diagrams are easily translatable to a [database layout].

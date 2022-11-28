@@ -3,9 +3,9 @@ use {
     chrono::Utc,
     lettre::Address,
     rocket_sync_db_pools::rusqlite,
-    rusqlite::{named_params, types::Type},
+    rusqlite::{named_params, types::Type, types::Value, ToSql},
     serde::{Deserialize, Serialize},
-    std::time::Duration,
+    std::{collections::BTreeMap, fmt, time::Duration},
     thiserror::Error,
 };
 
@@ -578,4 +578,84 @@ pub fn delete_person(
         },
     )?;
     Ok(())
+}
+
+/// Lists _all_ settings currently held, and uses [`stringify_value`] the values.
+pub fn all_settings(
+    conn: &mut rusqlite::Connection,
+) -> Result<BTreeMap<String, String>, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT name, value
+        FROM settings",
+    )?;
+
+    let settings = statement
+        .query_map([], |row| Ok((row.get(0)?, stringify_value(row.get(1)?))))?
+        .collect();
+
+    settings
+}
+
+/// Retrieves a setting stored in the database.
+pub fn get_setting(
+    conn: &mut rusqlite::Connection,
+    name: impl AsRef<str>,
+) -> Result<Value, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT value
+        FROM settings
+        WHERE name == :name",
+    )?;
+    let mut query = statement.query(named_params! {
+        ":name": name.as_ref(),
+    })?;
+
+    // can contain only one row since `name` is the primary key
+    let row = query.next()?.unwrap_or_else(|| {
+        panic!(
+            "expected setting '{:?}' to exist to query, found nothing in database",
+            name.as_ref()
+        )
+    });
+
+    row.get(0)
+}
+
+/// Updates a setting stored in the database.
+pub fn set_setting(
+    conn: &mut rusqlite::Connection,
+    name: impl AsRef<str>,
+    value: impl ToSql + fmt::Debug,
+) -> Result<(), rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "UPDATE settings
+        SET value = :value
+        WHERE name == :name
+        RETURNING true", // dummy value to retrieve whether the update happened or we were lied to
+                         // TODO: .execute returns a usize saying how many rows have been modified,
+                         // could use that instead
+    )?;
+    let mut query = statement.query(named_params! {
+        ":name": name.as_ref(),
+        ":value": value,
+    })?;
+
+    match query.next()? {
+        None => panic!(
+            "expected '{:?}' to exist to insert '{:?}', found nothing in database",
+            name.as_ref(),
+            value,
+        ),
+        Some(_) => Ok(()),
+    }
+}
+
+pub fn stringify_value(value: Value) -> String {
+    match value {
+        Value::Null => "".to_string(),
+        Value::Integer(number) => number.to_string(),
+        Value::Real(number) => number.to_string(),
+        Value::Text(text) => text,
+        Value::Blob(blob) => String::from_utf8_lossy(&blob).to_string(),
+    }
 }

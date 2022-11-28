@@ -25,13 +25,14 @@ use {
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
     sql_interface::{ApplyRegistrationError, SearchRegistrationsBy},
+    std::fmt,
 };
 
 /// A shorthand function for logging an internal server error and redirecting to the page for that.
 #[inline]
-pub fn server_error(admin_err: &str, user_err: &str) -> Flash<Redirect> {
+pub fn server_error(admin_err: impl fmt::Display, user_err: impl AsRef<str>) -> Flash<Redirect> {
     log::error!("{}", admin_err);
-    Flash::error(Redirect::to(uri!(server_error_panel)), user_err)
+    Flash::error(Redirect::to(uri!(server_error_panel)), user_err.as_ref())
 }
 
 #[database("bususages")]
@@ -208,9 +209,10 @@ fn rocket() -> _ {
                 register,
                 server_error_panel,
                 superuser::panel,
-                superuser::list,
+                superuser::drives_panel,
                 superuser::create_new_drive,
                 superuser::delete_drive,
+                superuser::introspect_drive,
                 superuser::registrations_panel,
                 superuser::person_panel,
                 superuser::create_new_person,
@@ -218,6 +220,8 @@ fn rocket() -> _ {
                 superuser::delete_person,
                 superuser::introspect_person,
                 superuser::register_person,
+                superuser::settings,
+                superuser::set_setting,
                 authflow::index,
                 authflow::login,
                 authflow::verify_token

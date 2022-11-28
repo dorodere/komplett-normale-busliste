@@ -1,12 +1,12 @@
 use {
     super::sql_interface::{
-        self, NewPerson, RegistrationUpdate,
+        self, Filter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
         UpdatePerson,
     },
     chrono::NaiveDate,
-    rusqlite::Connection,
+    rusqlite::{types::Value, Connection},
 };
 
 /// Creates a fresh empty database with tables defined.
@@ -67,11 +67,12 @@ fn persons() {
     assert_eq!(jackie.is_superuser, false);
     assert_eq!(jackie.token, None);
 
-    let all_persons = sql_interface::list_all_persons(&mut conn).unwrap();
+    let all_persons = sql_interface::list_all_persons(&mut conn, Filter::OnlyVisible).unwrap();
     for person in all_persons {
         sql_interface::delete_person(&mut conn, person.id).unwrap();
     }
-    let all_persons = sql_interface::list_all_persons(&mut conn).unwrap();
+    let all_persons =
+        sql_interface::list_all_persons(&mut conn, Filter::IncludingInvisible).unwrap();
     assert!(all_persons.is_empty());
 }
 
@@ -131,4 +132,31 @@ fn register() {
     assert_eq!(reg.date, date);
     assert_eq!(reg.person.prename, "Bob");
     assert!(reg.registered);
+}
+
+#[test]
+fn settings() {
+    let mut conn = init_db();
+
+    let _ = sql_interface::get_setting(&mut conn, "login-message").unwrap();
+
+    let very_special_message =
+        "this is totally not text that'd ever appear on the login page would it";
+    sql_interface::set_setting(&mut conn, "login-message", very_special_message).unwrap();
+
+    // some hypothetical business logic
+
+    let retrieved = sql_interface::get_setting(&mut conn, "login-message").unwrap();
+
+    if let Value::Text(content) = retrieved {
+        assert_eq!(content, very_special_message);
+    } else {
+        panic!(
+            "login message stored in database wasn't a text, but rather {:?}",
+            retrieved
+        );
+    }
+
+    let all_settings = sql_interface::all_settings(&mut conn).unwrap();
+    assert_eq!(all_settings["login-message"], very_special_message);
 }
