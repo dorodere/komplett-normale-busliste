@@ -21,10 +21,10 @@ use {
         request::FlashMessage,
         response::{Flash, Redirect},
     },
-    rocket_dyn_templates::Template,
+    rocket_dyn_templates::{context, handlebars::handlebars_helper, Template},
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
-    sql_interface::{ApplyRegistrationError, SearchRegistrationsBy},
+    sql_interface::{ApplyRegistrationError, DeadlineFilter, SearchRegistrationsBy},
     std::fmt,
 };
 
@@ -66,62 +66,51 @@ async fn dashboard(
         registration: sql_interface::Registration,
     }
 
-    #[derive(Debug, Serialize)]
-    struct Context {
-        flash: Option<String>,
-        past_regs: Vec<TemplateRegistration>,
-        future_regs: Vec<TemplateRegistration>,
-        show_superuser_controls: bool,
+    let mut registrations = [Vec::new(), Vec::new()];
+    let person_id = user.person_id();
+
+    for (i, filter) in [DeadlineFilter::OnlyAccessible, DeadlineFilter::OnlyLocked]
+        .into_iter()
+        .enumerate()
+    {
+        let from_db = conn
+            .run(move |c| {
+                sql_interface::search_registrations(
+                    c,
+                    &SearchRegistrationsBy::PersonId {
+                        id: person_id,
+                        filter,
+                    },
+                )
+            })
+            .await
+            .map_err(|err| {
+                server_error(
+                    format!("Error while loading registrations: {}", err),
+                    "an error occured while loading registrations",
+                )
+            })?;
+
+        let as_template = from_db
+            .into_iter()
+            .map(|registration| TemplateRegistration {
+                pretty_date: format_date(registration.date),
+                registration,
+            })
+            .collect();
+
+        registrations[i] = as_template;
     }
 
-    let registrations = match conn
-        .run(move |c| {
-            sql_interface::search_registrations(
-                c,
-                &SearchRegistrationsBy::PersonId {
-                    id: user.person_id(),
-                    ignore_past: false,
-                },
-            )
-        })
-        .await
-    {
-        Err(err) => {
-            return Err(server_error(
-                &format!("Error while loading registrations: {}", err),
-                "an error occured while loading registrations",
-            ))
-        }
-        Ok(x) => x,
-    };
-
     let flash = flash.map(|flashmsg| flashmsg.message().to_string());
-
-    let now = Utc::now().naive_local().date();
-    let mut past_regs = Vec::new();
-    let future_regs = registrations
-        .into_iter()
-        .filter_map(|r| {
-            let date = r.date;
-            let template_reg = TemplateRegistration {
-                pretty_date: format_date(date),
-                registration: r,
-            };
-            if date <= now {
-                past_regs.push(template_reg);
-                None
-            } else {
-                Some(template_reg)
-            }
-        })
-        .collect();
+    let [accessible_regs, locked_regs] = registrations;
 
     Ok(Template::render(
         "dashboard",
-        &Context {
+        context! {
             flash,
-            past_regs,
-            future_regs,
+            accessible_regs,
+            locked_regs,
             show_superuser_controls: superuser.is_some(),
         },
     ))
@@ -160,11 +149,31 @@ async fn register(
     user: User,
     registration: Form<Strict<Registration>>,
 ) -> Result<Redirect, Flash<Redirect>> {
-    let now = time::OffsetDateTime::now_utc().date();
-    if registration.date <= now {
+    let query_date = time_to_chrono_date(registration.date);
+    let deadline = conn
+        .run(move |c| sql_interface::get_drive_deadline(c, query_date))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while querying drive deadline for '{}': {}",
+                    registration.date, err
+                ),
+                "ein Fehler trat während des Abfragens der Anmeldungsdeadline auf",
+            )
+        })?
+        .unwrap_or_else(|| {
+            time_to_chrono_date(registration.date)
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        });
+
+    let now = Utc::now().naive_utc();
+
+    if deadline <= now {
         return Err(Flash::error(
             Redirect::to(uri!(dashboard)),
-            "Du kannst deine Anmeldung nicht mehr am Tag der Fahrt und danach ändern.",
+            "Die Deadline für diese Fahrt ist bereits abgelaufen.",
         ));
     }
 
@@ -181,7 +190,7 @@ async fn register(
         }
         Err(err) => {
             return Err(server_error(
-                &format!("Error while updating registration: {}", err),
+                format!("Error while updating registration: {}", err),
                 "ein Fehler trat während der Aktualisierung der Anmeldung auf",
             ))
         }
@@ -198,6 +207,10 @@ fn rocket() -> _ {
             engines
                 .handlebars
                 .register_escape_fn(|input| ammonia::clean_text(input));
+
+            handlebars_helper!(equals: |left_hand: String, right_hand: String| left_hand == right_hand);
+
+            engines.handlebars.register_helper("equals", Box::new(equals));
         }))
         .attach(AdHoc::config::<config::Config>())
         .attach(BususagesDBConn::fairing())
@@ -212,6 +225,7 @@ fn rocket() -> _ {
                 superuser::drives_panel,
                 superuser::create_new_drive,
                 superuser::delete_drive,
+                superuser::update_deadline,
                 superuser::introspect_drive,
                 superuser::registrations_panel,
                 superuser::person_panel,

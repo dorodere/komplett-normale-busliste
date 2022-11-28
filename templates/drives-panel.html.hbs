@@ -32,12 +32,20 @@
 					<thead>
 						<tr>
 							<th>Date</th>
+							<th>Registration deadline (in UTC)</th>
 						</tr>
 					</thead>
 					<tbody>
 						{{#each upcoming_drives}}
 							<tr>
 								<td>{{this.pretty_date}}</td>
+								<td>
+									<form action="/drive/deadline/update" method="post">
+										<input type="hidden" name="id" value="{{this.id}}"/>
+										<input type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+										<button>Apply</button>
+									</form>
+								</td>
 								<td class="toggle-button">
 									<form action="/drive/list" method="get"/>
 										<input type="hidden" name="date" value="{{this.date}}"/>
@@ -61,12 +69,20 @@
 					<thead>
 						<tr>
 							<th>Date</th>
+							<th>Registration deadline (in UTC)</th>
 						</tr>
 					</thead>
 					<tbody>
 							{{#each drives}}
 								<tr>
 									<td>{{this.pretty_date}}</td>
+									<td>
+										<form action="/drive/deadline/update" method="post">
+											<input type="hidden" name="id" value="{{this.id}}"/>
+											<input type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+										<button>Apply</button>
+										</form>
+									</td>
 									<td>
 										<form action="/drive/list" method="get"/>
 											<input type="hidden" name="date" value="{{this.date}}"/>

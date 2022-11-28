@@ -25,7 +25,7 @@
 
 		<div class="functionality-section">
 			<h2>Zukünftige Busfahrten</h2>
-			{{#if future_regs}}
+			{{#if accessible_regs}}
 				<table>
 					<thead>
 						<tr>
@@ -34,7 +34,7 @@
 						</tr>
 					</thead>
 					<tbody>
-							{{#each future_regs}}
+							{{#each accessible_regs}}
 								<tr>
 									<td>{{this.pretty_date}}</td>
 									{{#if this.registration.registered}}
@@ -63,8 +63,8 @@
 		</div>
 
 		<div class="functionality-section">
-			<h2>Vergangene Busfahrten</h2>
-			{{#if past_regs}}
+			<h2>Nicht mehr registrierbare Busfahrten</h2>
+			{{#if locked_regs}}
 				<p>Diese sind nicht mehr veränderbar, aber als Referenz und für Transparenz werden sie trotzdem hier angezeigt.</p>
 				<!-- and no you scripty scripter, a serverside check for that is done ofc -->
 				<table>
@@ -75,7 +75,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{{#each past_regs}}
+						{{#each locked_regs}}
 							<tr>
 								<td>{{this.pretty_date}}</td>
 								{{#if this.registration.registered}}

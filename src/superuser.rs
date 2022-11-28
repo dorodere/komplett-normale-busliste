@@ -1,11 +1,11 @@
 use {
     super::{
         authflow::Superuser,
-        date_helpers::time_to_chrono_date,
+        date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
         format_date, server_error,
         sql_interface::{
-            self, Filter, InsertDriveError, Person, Registration, SearchPersonBy,
-            SearchRegistrationsBy,
+            self, DeadlineFilter, InsertDriveError, Person, Registration, SearchPersonBy,
+            SearchRegistrationsBy, VisibilityFilter,
         },
         BususagesDBConn,
     },
@@ -15,7 +15,8 @@ use {
         request::FlashMessage,
         response::{Flash, Redirect},
     },
-    rocket_dyn_templates::Template,
+    rocket_dyn_templates::{context, Template},
+    rusqlite::types::Value,
     serde::Serialize,
 };
 
@@ -44,6 +45,7 @@ pub async fn drives_panel(
     struct TemplateDrive {
         date: chrono::NaiveDate,
         pretty_date: String,
+        deadline: Option<chrono::NaiveDateTime>,
         id: i64,
     }
 
@@ -68,6 +70,7 @@ pub async fn drives_panel(
         .map(|d| TemplateDrive {
             pretty_date: super::format_date(d.date),
             date: d.date,
+            deadline: d.deadline,
             id: d.id,
         })
         .collect();
@@ -140,9 +143,31 @@ pub async fn create_new_drive(
     form: Form<Strict<NewDrive>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
-    let date = time_to_chrono_date(form.date);
+    let drive_date = time_to_chrono_date(form.date);
+
+    let default_deadline = conn
+        .run(|c| sql_interface::get_setting(c, "default-deadline"))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!("Error querying default deadline: {}", err),
+                "ein Fehler trat auf, während ich nach den Einstellungen geschaut habe",
+            )
+        })?;
+    let deadline = match default_deadline {
+        Value::Integer(deadline_weekday) => Some(figure_out_exact_deadline(
+            deadline_weekday as u32,
+            drive_date,
+        )),
+        Value::Null => None,
+        _ => unreachable!(
+            "validation messed up, contained '{:?}' which is not an integer nor null",
+            default_deadline
+        ),
+    };
+
     match conn
-        .run(move |c| sql_interface::insert_new_drive(c, date))
+        .run(move |c| sql_interface::insert_new_drive(c, drive_date, deadline))
         .await
     {
         Err(InsertDriveError::AlreadyExists) => Err(Flash::error(
@@ -151,7 +176,7 @@ pub async fn create_new_drive(
         )),
         Err(err) => {
             return Err(server_error(
-                &format!("Error inserting new drive: {}\nDate: {:?}", err, date),
+                format!("Error inserting new drive: {}\nDate: {:?}", err, drive_date),
                 "an error occured while inserting a new drive",
             ))
         }
@@ -185,6 +210,42 @@ pub async fn delete_drive(
         })
 }
 
+#[derive(FromForm, Debug)]
+pub struct UpdateDeadline {
+    id: i64,
+    deadline: time::PrimitiveDateTime,
+}
+
+#[post("/drive/deadline/update", data = "<update>")]
+pub async fn update_deadline(
+    conn: BususagesDBConn,
+    update: Option<Form<Strict<UpdateDeadline>>>,
+    _superuser: Superuser,
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
+    let Some(update) = update else {
+        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Invalid date selected."));
+    };
+
+    let update = sql_interface::UpdateDeadline {
+        id: update.id,
+        deadline: Some(time_to_chrono_datetime(update.deadline)),
+    };
+
+    let closure_update = update.clone();
+    conn.run(move |c| sql_interface::update_drive_deadline(c, closure_update))
+        .await
+        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Deadline angepasst."))
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while updating drive {} to deadline {:?}: {}",
+                    update.id, update.deadline, err,
+                ),
+                "ein Fehler trat während der Aktualisierung der Deadline auf",
+            )
+        })
+}
+
 /// Just a shorthand for an error flash containing a redirect.
 #[inline]
 fn flash_error(message: &str) -> Flash<Redirect> {
@@ -204,7 +265,7 @@ pub async fn person_panel(
     }
 
     let persons = conn
-        .run(|c| sql_interface::list_all_persons(c, Filter::IncludingInvisible))
+        .run(|c| sql_interface::list_all_persons(c, VisibilityFilter::IncludingInvisible))
         .await
         .map_err(|err| {
             server_error(
@@ -378,27 +439,20 @@ pub async fn introspect_person(
         registration: sql_interface::Registration,
     }
 
-    #[derive(Debug, Serialize)]
-    struct Context {
-        prename: String,
-        name: String,
-        registrations: Vec<TemplateRegistration>,
-    }
-
     let registrations = conn
         .run(move |c| {
             sql_interface::search_registrations(
                 c,
                 &SearchRegistrationsBy::PersonId {
                     id,
-                    ignore_past: false,
+                    filter: DeadlineFilter::ListAll,
                 },
             )
         })
         .await
         .map_err(|err| {
             server_error(
-                &format!(
+                format!(
                     "Error occurred while introspecting {} (registration search): {}",
                     id, err
                 ),
@@ -411,7 +465,7 @@ pub async fn introspect_person(
         .await
         .map_err(|err| {
             server_error(
-                &format!(
+                format!(
                     "Error occurred while introspecting {} (name search): {}",
                     id, err
                 ),
@@ -419,7 +473,7 @@ pub async fn introspect_person(
             )
         })?;
 
-    let registrations = registrations
+    let registrations: Vec<_> = registrations
         .into_iter()
         .map(|r| TemplateRegistration {
             pretty_date: format_date(r.date),
@@ -429,7 +483,7 @@ pub async fn introspect_person(
 
     Ok(Template::render(
         "personintrospect",
-        Context {
+        context! {
             prename: person.prename,
             name: person.name,
             registrations,
@@ -486,14 +540,21 @@ pub async fn register_person(
 #[get("/settings")]
 pub async fn settings(
     conn: BususagesDBConn,
+    flash: Option<FlashMessage<'_>>,
     _superuser: Superuser,
 ) -> Result<Template, Flash<Redirect>> {
-    let settings = conn.run(sql_interface::all_settings).await.map_err(|err| {
+    let mut settings = conn.run(sql_interface::all_settings).await.map_err(|err| {
         server_error(
             format!("Error while fetching current setting values: {}", err),
             "ein Fehler trat während des Abfragen der Werte der aktuellen Einstellungen auf",
         )
     })?;
+    settings.insert(
+        "flash".to_string(),
+        flash
+            .map(|flash| flash.message().to_string())
+            .unwrap_or_else(|| "".to_string()),
+    );
     Ok(Template::render("settings", settings))
 }
 
@@ -508,21 +569,33 @@ pub async fn set_setting(
     conn: BususagesDBConn,
     update: Form<Strict<Setting>>,
     _superuser: Superuser,
-) -> Result<Redirect, Flash<Redirect>> {
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
     // probably want to perform some additional validation here for new settings, but for now this is fine
-    if !matches!(update.name.as_ref(), "login-message") {
-        return Err(server_error(
-            format!(
-                "User wanted to set setting '{}' to '{}', which doesn't even exist",
-                update.name, update.value
-            ),
-            "ein Fehler trat während des Setzens der Einstellung auf",
-        ));
-    }
+    let value = match update.name.as_ref() {
+        "login-message" => Value::Text(update.value.clone()),
+        "default-deadline" => match (update.value.len(), update.value.chars().next()) {
+            (0, None) => Value::Null,
+            (1, Some('0'..='6')) => Value::Integer(update.value.parse().unwrap()),
+            _ => {
+                return Err(server_error(
+                    format!("User wanted to set default deadline to '{}', which is invalid (validation/UI out of sync?)", update.value),
+                    "ein Fehler trat während der Anwendung der Default-Deadline auf",
+                ))
+            }
+        },
+        _ => {
+            return Err(server_error(
+                format!(
+                    "User wanted to set setting '{}' to '{}', which isn't validated for (but may exist in the database, in that case validation + database are out of sync)",
+                    update.name, update.value
+                ),
+                "ein Fehler trat während des Setzens der Einstellung auf",
+            ));
+        }
+    };
+    let name = update.name.clone();
 
-    // working around ownership, we need the update later on in case of error reporting
-    let cloned_update = update.clone();
-    conn.run(move |c| sql_interface::set_setting(c, cloned_update.name, cloned_update.value))
+    conn.run(move |c| sql_interface::set_setting(c, name, value))
         .await
         .map_err(|err| {
             server_error(
@@ -534,5 +607,8 @@ pub async fn set_setting(
             )
         })?;
 
-    Ok(Redirect::to(uri!(settings)))
+    Ok(Flash::success(
+        Redirect::to(uri!(settings)),
+        "Einstellung angewandt.",
+    ))
 }

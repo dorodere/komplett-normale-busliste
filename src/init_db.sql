@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS person(
 CREATE TABLE IF NOT EXISTS drive(
     drive_id INTEGER,
     drivedate DATE NOT NULL,
+    deadline DATETIME,
     UNIQUE(drivedate),
     PRIMARY KEY (drive_id AUTOINCREMENT)
 );
@@ -39,4 +40,7 @@ INSERT INTO settings(name, value)
 VALUES (
     "login-message",
     "Falls du nicht reinkommen solltest, du hast dich vermutlich vertippt oder die falsche Email angegeben."
+), (
+    "default-deadline",
+    2
 );

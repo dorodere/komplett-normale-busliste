@@ -3,7 +3,7 @@ use {
         self, Filter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
-        UpdatePerson,
+        UpdatePerson, VisibilityFilter,
     },
     chrono::NaiveDate,
     rusqlite::{types::Value, Connection},
@@ -67,12 +67,13 @@ fn persons() {
     assert_eq!(jackie.is_superuser, false);
     assert_eq!(jackie.token, None);
 
-    let all_persons = sql_interface::list_all_persons(&mut conn, Filter::OnlyVisible).unwrap();
+    let all_persons =
+        sql_interface::list_all_persons(&mut conn, VisibilityFilter::OnlyVisible).unwrap();
     for person in all_persons {
         sql_interface::delete_person(&mut conn, person.id).unwrap();
     }
     let all_persons =
-        sql_interface::list_all_persons(&mut conn, Filter::IncludingInvisible).unwrap();
+        sql_interface::list_all_persons(&mut conn, VisibilityFilter::IncludingInvisible).unwrap();
     assert!(all_persons.is_empty());
 }
 
