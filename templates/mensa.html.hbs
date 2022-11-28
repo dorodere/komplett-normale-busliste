@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mensa - Komplett normale Busliste</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <H1>Busliste</H1>
+    <div>
+        <img src="/static/qrCode.svg" alt="QR-Code">
+    </div>
+    <div>
+        <p>test0</p>
+        <p>test1</p>
+    </div>
+    <script>
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        async function reload() {
+            await sleep(60000);
+            window.location.reload(true);
+        }
+        reload()
+    </script>
+</body>
+
+</html>

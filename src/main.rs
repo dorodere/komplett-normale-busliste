@@ -4,6 +4,7 @@ extern crate rocket;
 mod authflow;
 mod config;
 mod date_helpers;
+mod mensa_screen;
 mod sql_interface;
 mod superuser;
 #[cfg(test)]
@@ -207,6 +208,7 @@ fn rocket() -> _ {
                 logout,
                 register,
                 server_error_panel,
+                mensa_screen::mensa,
                 superuser::panel,
                 superuser::list,
                 superuser::create_new_drive,
