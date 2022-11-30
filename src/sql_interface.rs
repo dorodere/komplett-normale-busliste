@@ -496,8 +496,10 @@ pub fn insert_new_drive(
 ) -> Result<(), InsertDriveError> {
     match_constraint_violation!(
         conn.execute(
-            "INSERT INTO drive (drivedate, deadline)
-            VALUES (:date, :deadline)",
+            "INSERT INTO drive (drivedate, deadline, registration_cap)
+            SELECT :date, :deadline, value
+            FROM settings
+            WHERE name == 'default-registration-cap'",
             named_params! {
                 ":date": date,
                 ":deadline": deadline,
