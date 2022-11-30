@@ -1,11 +1,11 @@
 use {
     super::sql_interface::{
-        self, Filter, NewPerson, RegistrationUpdate,
+        self, DeadlineFilter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
         UpdatePerson, VisibilityFilter,
     },
-    chrono::NaiveDate,
+    chrono::{Days, NaiveDate},
     rusqlite::{types::Value, Connection},
 };
 
@@ -103,8 +103,9 @@ fn register() {
 
     // do you know that date? (no it's not a historical or political reference, just a very special
     // release date)
-    let date = NaiveDate::from_ymd(2009, 1, 16);
-    sql_interface::insert_new_drive(&mut conn, date).unwrap();
+    let date = NaiveDate::from_ymd_opt(2009, 1, 16).unwrap();
+    let deadline = (date - Days::new(2)).and_hms_opt(19, 2, 00).unwrap();
+    sql_interface::insert_new_drive(&mut conn, date, Some(deadline)).unwrap();
 
     let regupdate = RegistrationUpdate {
         date,
@@ -124,7 +125,7 @@ fn register() {
         &mut conn,
         &PersonId {
             id: bob.id,
-            ignore_past: false,
+            filter: DeadlineFilter::ListAll,
         },
     )
     .unwrap();
