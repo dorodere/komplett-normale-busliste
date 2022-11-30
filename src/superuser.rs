@@ -585,7 +585,7 @@ pub async fn set_setting(
         },
         "default-registration-cap" => {
             let cap = update.value.parse::<u32>().map_err(|_| {
-                Flash::error(Redirect::to(uri!(settings)), "Die Zahl ist unmöglich groß, der maximale Wert beläuft sich auf 2 ^ 32 - 1. Was an sich schon bedenklich ist.")
+                Flash::error(Redirect::to(uri!(settings)), "Die Zahl ist nicht valide, oder zu groß.")
             })?;
             Value::Integer(cap as i64)
         },
