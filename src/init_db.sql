@@ -43,4 +43,7 @@ VALUES (
 ), (
     "default-deadline",
     2
+), (
+    "default-registration-cap",
+    50
 );
