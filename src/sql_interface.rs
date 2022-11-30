@@ -522,26 +522,39 @@ pub fn delete_drive(conn: &mut rusqlite::Connection, id: i64) -> Result<(), rusq
 }
 
 #[derive(Clone)]
-pub struct UpdateDeadline {
+pub struct UpdateDrive {
     pub id: i64,
+    pub date: chrono::NaiveDate,
     pub deadline: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Debug, Error)]
+pub enum UpdateDriveError {
+    #[error("Database or query error: {0}")]
+    RusqliteError(#[from] rusqlite::Error),
+    #[error("Duplicated drive date")]
+    DateAlreadyExists,
 }
 
 /// Updates when a drive's last registration opportunity (= "deadline") is.
 pub fn update_drive_deadline(
     conn: &mut rusqlite::Connection,
-    update: UpdateDeadline,
-) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "UPDATE drive
-        SET deadline = :deadline
-        WHERE drive_id == :id",
-        named_params! {
-            ":deadline": update.deadline,
-            ":id": update.id,
-        },
+    update: UpdateDrive,
+) -> Result<(), UpdateDriveError> {
+    match_constraint_violation!(
+        conn.execute(
+            "UPDATE drive
+            SET drivedate = :date, deadline = :deadline
+            WHERE drive_id == :id",
+            named_params! {
+                ":date": update.date,
+                ":deadline": update.deadline,
+                ":id": update.id,
+            },
+        )
+        .map(|_| ()),
+        UpdateDriveError::DateAlreadyExists
     )
-    .map(|_| ())
 }
 
 #[derive(Debug, Error)]

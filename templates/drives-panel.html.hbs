@@ -28,6 +28,12 @@
 		<div class="functionality-section">
 			<h2>Upcoming drives</h2>
 			{{#if upcoming_drives}}
+				{{#each upcoming_drives}}
+					<form action="/drive/update" method="post" id="upcoming-form-{{this.id}}" autocomplete="off">
+						<input type="hidden" name="id" value="{{this.id}}"/>
+					</form>
+				{{/each}}
+
 				<table>
 					<thead>
 						<tr>
@@ -38,13 +44,14 @@
 					<tbody>
 						{{#each upcoming_drives}}
 							<tr>
-								<td>{{this.pretty_date}}</td>
 								<td>
-									<form action="/drive/deadline/update" method="post">
-										<input type="hidden" name="id" value="{{this.id}}"/>
-										<input type="datetime-local" name="deadline" value="{{this.deadline}}"/>
-										<button>Apply</button>
-									</form>
+									<input form="upcoming-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
+								</td>
+								<td>
+									<input form="upcoming-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+								</td>
+								<td class="toggle-button">
+									<button form="upcoming-form-{{this.id}}">Apply changes</button>
 								</td>
 								<td class="toggle-button">
 									<form action="/drive/list" method="get"/>
@@ -65,6 +72,12 @@
 			<h2>All drives</h2>
 			<p><b>NOTE: A delete action is irreversible and also deletes all associated registrations!</b></p>
 			{{#if drives}}
+				{{#each drives}}
+					<form action="/drive/update" method="post" id="all-form-{{this.id}}" autocomplete="off">
+						<input type="hidden" name="id" value="{{this.id}}"/>
+					</form>
+				{{/each}}
+
 				<table>
 					<thead>
 						<tr>
@@ -75,13 +88,14 @@
 					<tbody>
 							{{#each drives}}
 								<tr>
-									<td>{{this.pretty_date}}</td>
 									<td>
-										<form action="/drive/deadline/update" method="post">
-											<input type="hidden" name="id" value="{{this.id}}"/>
-											<input type="datetime-local" name="deadline" value="{{this.deadline}}"/>
-										<button>Apply</button>
-										</form>
+										<input form="all-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
+									</td>
+									<td>
+										<input form="all-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+									</td>
+									<td>
+										<button form="all-form-{{this.id}}">Apply changes</button>
 									</td>
 									<td>
 										<form action="/drive/list" method="get"/>

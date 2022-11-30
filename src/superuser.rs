@@ -5,7 +5,7 @@ use {
         format_date, server_error,
         sql_interface::{
             self, DeadlineFilter, InsertDriveError, Person, Registration, SearchPersonBy,
-            SearchRegistrationsBy, VisibilityFilter,
+            SearchRegistrationsBy, UpdateDriveError, VisibilityFilter,
         },
         BususagesDBConn,
     },
@@ -211,39 +211,45 @@ pub async fn delete_drive(
 }
 
 #[derive(FromForm, Debug)]
-pub struct UpdateDeadline {
+pub struct UpdateDrive {
     id: i64,
+    date: time::Date,
     deadline: time::PrimitiveDateTime,
 }
 
-#[post("/drive/deadline/update", data = "<update>")]
+#[post("/drive/update", data = "<update>")]
 pub async fn update_deadline(
     conn: BususagesDBConn,
-    update: Option<Form<Strict<UpdateDeadline>>>,
+    update: Option<Form<Strict<UpdateDrive>>>,
     _superuser: Superuser,
 ) -> Result<Flash<Redirect>, Flash<Redirect>> {
     let Some(update) = update else {
-        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Invalid date selected."));
+        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Please fill all fields."));
     };
 
-    let update = sql_interface::UpdateDeadline {
+    let update = sql_interface::UpdateDrive {
         id: update.id,
+        date: time_to_chrono_date(update.date),
         deadline: Some(time_to_chrono_datetime(update.deadline)),
     };
 
     let closure_update = update.clone();
     conn.run(move |c| sql_interface::update_drive_deadline(c, closure_update))
         .await
-        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Deadline angepasst."))
-        .map_err(|err| {
-            server_error(
+        .map_err(|err| match err {
+            UpdateDriveError::DateAlreadyExists => Flash::error(
+                Redirect::to(uri!(drives_panel)),
+                "Es existiert bereits ein Drive mit diesem Datum, nichts geändert.",
+            ),
+            UpdateDriveError::RusqliteError(err) => server_error(
                 format!(
                     "Error while updating drive {} to deadline {:?}: {}",
                     update.id, update.deadline, err,
                 ),
                 "ein Fehler trat während der Aktualisierung der Deadline auf",
-            )
+            ),
         })
+        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Deadline angepasst."))
 }
 
 /// Just a shorthand for an error flash containing a redirect.
