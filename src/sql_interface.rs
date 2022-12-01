@@ -89,11 +89,12 @@ fn row_to_person(row: &rusqlite::Row) -> rusqlite::Result<Person> {
 }
 
 /// A drive a user can register for and a registration then refers to.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Drive {
     pub id: i64,
     pub date: chrono::NaiveDate,
     pub deadline: Option<chrono::NaiveDateTime>,
+    pub registration_cap: Option<u64>,
 }
 
 /// How a person uses the bus on a specfic date.
@@ -459,7 +460,7 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rus
     let now = Utc::now().naive_local().date();
     let time_slices = ["drivedate < :now", ":now <= drivedate"].map(|condition| {
         let mut statement = conn.prepare(&format!(
-            "SELECT drive_id, drivedate, deadline
+            "SELECT drive_id, drivedate, deadline, registration_cap
             FROM drive
             WHERE {}",
             condition,
@@ -474,6 +475,7 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rus
                     id: row.get(0)?,
                     date: row.get(1)?,
                     deadline: row.get(2)?,
+                    registration_cap: row.get(3)?,
                 })
             },
         )?;
@@ -547,13 +549,6 @@ pub fn delete_drive(conn: &mut rusqlite::Connection, id: i64) -> Result<(), rusq
     Ok(())
 }
 
-#[derive(Clone)]
-pub struct UpdateDrive {
-    pub id: i64,
-    pub date: chrono::NaiveDate,
-    pub deadline: Option<chrono::NaiveDateTime>,
-}
-
 #[derive(Debug, Error)]
 pub enum UpdateDriveError {
     #[error("Database or query error: {0}")]
@@ -562,19 +557,22 @@ pub enum UpdateDriveError {
     DateAlreadyExists,
 }
 
-/// Updates when a drive's last registration opportunity (= "deadline") is.
+/// Updates a drive's details, based on the ID.
 pub fn update_drive_deadline(
     conn: &mut rusqlite::Connection,
-    update: UpdateDrive,
+    update: Drive,
 ) -> Result<(), UpdateDriveError> {
     match_constraint_violation!(
         conn.execute(
             "UPDATE drive
-            SET drivedate = :date, deadline = :deadline
+            SET drivedate = :date,
+                deadline = :deadline,
+                registration_cap = :registration_cap
             WHERE drive_id == :id",
             named_params! {
                 ":date": update.date,
                 ":deadline": update.deadline,
+                ":registration_cap": update.registration_cap,
                 ":id": update.id,
             },
         )

@@ -50,6 +50,10 @@ input {
 	padding-right: 8px;
 }
 
+input[type="number"] {
+	max-width: 2cm;
+}
+
 a div {
 	animation: 0.5s button-dehover ease-in both;
 	background-color: #1D1D1D;
@@ -86,7 +90,7 @@ p {
 }
 
 .dangerous {
-	margin-right: 6em;
+	margin-right: 3em;
 	background-color: #E52453;
 }
 

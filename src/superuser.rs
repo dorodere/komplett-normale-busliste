@@ -187,6 +187,7 @@ pub struct UpdateDrive {
     id: i64,
     date: time::Date,
     deadline: time::PrimitiveDateTime,
+    registration_cap: Option<u64>,
 }
 
 #[post("/drive/update", data = "<update>")]
@@ -199,10 +200,11 @@ pub async fn update_deadline(
         return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Please fill all fields."));
     };
 
-    let update = sql_interface::UpdateDrive {
+    let update = sql_interface::Drive {
         id: update.id,
         date: time_to_chrono_date(update.date),
         deadline: Some(time_to_chrono_datetime(update.deadline)),
+        registration_cap: update.registration_cap,
     };
 
     let closure_update = update.clone();

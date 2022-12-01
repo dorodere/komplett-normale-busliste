@@ -42,6 +42,7 @@
 								<th class="toggle-button"></th>
 								<th>Date</th>
 								<th>Registration deadline (in UTC)</th>
+								<th>Registration cap</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -53,12 +54,17 @@
 											<button class="dangerous">Delete</button>
 										</form>
 									</td>
+
 									<td>
 										<input form="future-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
 									</td>
 									<td>
 										<input form="future-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
 									</td>
+									<td>
+										<input form="future-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{this.registration_cap}}"/>
+									</td>
+
 									<td class="toggle-button">
 										<button form="future-form-{{this.id}}">Apply changes</button>
 									</td>
@@ -92,6 +98,7 @@
 							<th class="toggle-button"></th>
 							<th>Date</th>
 							<th>Registration deadline (in UTC)</th>
+							<th>Registration cap</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -103,12 +110,17 @@
 											<button class="dangerous">Delete</button>
 										</form>
 									</td>
+
 									<td>
 										<input form="past-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
 									</td>
 									<td>
 										<input form="past-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
 									</td>
+									<td>
+										<input form="future-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{this.registration_cap}}"/>
+									</td>
+
 									<td class="toggle-button">
 										<button form="past-form-{{this.id}}">Apply changes</button>
 									</td>
