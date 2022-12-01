@@ -15,6 +15,8 @@
 			<p class="flash">{{flash}}</p>
 		{{/if}}
 
+		<p><b>NOTE: A delete action is irreversible and also deletes all associated registrations!</b></p>
+
 		<div class="functionality-section">
 			<h2>Issue new drives</h2>
 			<p>Here you can issue new drives, which then can all other users register to. <b>A user cannot register to a non-existent drive.</b><p>
@@ -26,87 +28,94 @@
 		</div>
 
 		<div class="functionality-section">
-			<h2>Upcoming drives</h2>
-			{{#if upcoming_drives}}
-				{{#each upcoming_drives}}
-					<form action="/drive/update" method="post" id="upcoming-form-{{this.id}}" autocomplete="off">
-						<input type="hidden" name="id" value="{{this.id}}"/>
-					</form>
-				{{/each}}
+			<h2>Future drives</h2>
+				{{#if future_drives}}
+					{{#each future_drives}}
+						<form action="/drive/update" method="post" id="future-form-{{this.id}}" autocomplete="off">
+							<input type="hidden" name="id" value="{{this.id}}"/>
+						</form>
+					{{/each}}
 
-				<table>
-					<thead>
-						<tr>
-							<th>Date</th>
-							<th>Registration deadline (in UTC)</th>
-						</tr>
-					</thead>
-					<tbody>
-						{{#each upcoming_drives}}
+					<table>
+						<thead>
 							<tr>
-								<td>
-									<input form="upcoming-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
-								</td>
-								<td>
-									<input form="upcoming-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
-								</td>
-								<td class="toggle-button">
-									<button form="upcoming-form-{{this.id}}">Apply changes</button>
-								</td>
-								<td class="toggle-button">
-									<form action="/drive/list" method="get"/>
-										<input type="hidden" name="date" value="{{this.date}}"/>
-										<button>Registrations</button>
-									</form>
-								</td>
+								<th class="toggle-button"></th>
+								<th>Date</th>
+								<th>Registration deadline (in UTC)</th>
 							</tr>
-						{{/each}}
-					</tbody>
-				</table>
-			{{else}}
-				<p>Well, seems like there are no drives in future. :(</p>
-			{{/if}}
-		</div>
-
-		<div class="functionality-section">
-			<h2>All drives</h2>
-			<p><b>NOTE: A delete action is irreversible and also deletes all associated registrations!</b></p>
-			{{#if drives}}
-				{{#each drives}}
-					<form action="/drive/update" method="post" id="all-form-{{this.id}}" autocomplete="off">
-						<input type="hidden" name="id" value="{{this.id}}"/>
-					</form>
-				{{/each}}
-
-				<table>
-					<thead>
-						<tr>
-							<th>Date</th>
-							<th>Registration deadline (in UTC)</th>
-						</tr>
-					</thead>
-					<tbody>
-							{{#each drives}}
+						</thead>
+						<tbody>
+							{{#each future_drives}}
 								<tr>
-									<td>
-										<input form="all-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
+									<td class="toggle-button">
+										<form action="/drive/delete" method="post"/>
+											<input type="hidden" name="id" value="{{this.id}}"/>
+											<button class="dangerous">Delete</button>
+										</form>
 									</td>
 									<td>
-										<input form="all-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+										<input form="future-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
 									</td>
 									<td>
-										<button form="all-form-{{this.id}}">Apply changes</button>
+										<input form="future-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
 									</td>
-									<td>
+									<td class="toggle-button">
+										<button form="future-form-{{this.id}}">Apply changes</button>
+									</td>
+									<td class="toggle-button">
 										<form action="/drive/list" method="get"/>
 											<input type="hidden" name="date" value="{{this.date}}"/>
 											<button>Registrations</button>
 										</form>
 									</td>
-									<td>
+								</tr>
+							{{/each}}
+						</tbody>
+					</table>
+				{{else}}
+					<p>Well, seems like there are no drives in future. :(</p>
+				{{/if}}
+		</div>
+
+		<div class="functionality-section">
+			<h2>All drives</h2>
+			{{#if past_drives}}
+				{{#each past_drives}}
+					<form action="/drive/update" method="post" id="past-form-{{this.id}}" autocomplete="off">
+						<input type="hidden" name="id" value="{{this.id}}"/>
+					</form>
+				{{/each}}
+
+				<table>
+					<thead>
+						<tr>
+							<th class="toggle-button"></th>
+							<th>Date</th>
+							<th>Registration deadline (in UTC)</th>
+						</tr>
+					</thead>
+					<tbody>
+							{{#each past_drives}}
+								<tr>
+									<td class="toggle-button">
 										<form action="/drive/delete" method="post"/>
 											<input type="hidden" name="id" value="{{this.id}}"/>
 											<button class="dangerous">Delete</button>
+										</form>
+									</td>
+									<td>
+										<input form="past-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
+									</td>
+									<td>
+										<input form="past-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+									</td>
+									<td class="toggle-button">
+										<button form="past-form-{{this.id}}">Apply changes</button>
+									</td>
+									<td class="toggle-button">
+										<form action="/drive/list" method="get"/>
+											<input type="hidden" name="date" value="{{this.date}}"/>
+											<button>Registrations</button>
 										</form>
 									</td>
 								</tr>
@@ -114,7 +123,7 @@
 					</tbody>
 				</table>
 			{{else}}
-				<p>Also it seems like there are no drives at all.</p>
+				<p>There have never been any drives.</p>
 			{{/if}}
 		</div>
 	</body>

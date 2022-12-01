@@ -450,16 +450,42 @@ pub fn update_token(
     Ok(())
 }
 
-pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<Vec<Drive>, rusqlite::Error> {
-    let mut statement = conn.prepare("SELECT drive_id, drivedate, deadline FROM drive")?;
-    let result = statement.query_map([], |row| {
-        Ok(Drive {
-            id: row.get(0)?,
-            date: row.get(1)?,
-            deadline: row.get(2)?,
-        })
-    })?;
-    result.collect()
+pub struct DriveOverview {
+    pub past: Vec<Drive>,
+    pub future: Vec<Drive>,
+}
+
+pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rusqlite::Error> {
+    let now = Utc::now().naive_local().date();
+    let time_slices = ["drivedate < :now", ":now <= drivedate"].map(|condition| {
+        let mut statement = conn.prepare(&format!(
+            "SELECT drive_id, drivedate, deadline
+            FROM drive
+            WHERE {}",
+            condition,
+        ))?;
+
+        let rows = statement.query_map(
+            named_params! {
+                ":now": now,
+            },
+            |row| {
+                Ok(Drive {
+                    id: row.get(0)?,
+                    date: row.get(1)?,
+                    deadline: row.get(2)?,
+                })
+            },
+        )?;
+
+        rows.collect()
+    });
+
+    let [past, future]: [Result<_, _>; 2] = time_slices;
+    Ok(DriveOverview {
+        past: past?,
+        future: future?,
+    })
 }
 
 pub fn get_drive_deadline(

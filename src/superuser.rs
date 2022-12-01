@@ -44,51 +44,23 @@ pub async fn drives_panel(
     #[derive(Clone, Debug, Serialize)]
     struct TemplateDrive {
         date: chrono::NaiveDate,
-        pretty_date: String,
         deadline: Option<chrono::NaiveDateTime>,
         id: i64,
     }
 
-    #[derive(Debug, Serialize)]
-    struct Context {
-        flash: Option<String>,
-        drives: Vec<TemplateDrive>,
-        upcoming_drives: Vec<TemplateDrive>,
-    }
-
-    let drives = match conn.run(sql_interface::list_drives).await {
-        Err(err) => {
-            return Err(server_error(
-                &format!("Error while listing drives: {}", err),
-                "an error occured while listing drives",
-            ));
-        }
-        Ok(x) => x,
-    };
-    let drives: Vec<_> = drives
-        .into_iter()
-        .map(|d| TemplateDrive {
-            pretty_date: super::format_date(d.date),
-            date: d.date,
-            deadline: d.deadline,
-            id: d.id,
-        })
-        .collect();
-
-    let now = Utc::now().naive_local().date();
-    let upcoming_drives = drives
-        .clone()
-        .into_iter()
-        .filter(|d| d.date >= now)
-        .take(5)
-        .collect();
+    let drives = conn.run(sql_interface::list_drives).await.map_err(|err| {
+        server_error(
+            format!("Error while listing drives: {}", err),
+            "an error occured while listing drives",
+        )
+    })?;
 
     Ok(Template::render(
         "drives-panel",
-        &Context {
+        context! {
             flash: flash.map(|flash| flash.message().to_string()),
-            upcoming_drives,
-            drives,
+            future_drives: drives.future,
+            past_drives: drives.past,
         },
     ))
 }
@@ -249,7 +221,7 @@ pub async fn update_deadline(
                 "ein Fehler trat während der Aktualisierung der Deadline auf",
             ),
         })
-        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Deadline angepasst."))
+        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Änderungen angewandt."))
 }
 
 /// Just a shorthand for an error flash containing a redirect.
