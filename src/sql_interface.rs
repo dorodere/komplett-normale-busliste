@@ -94,7 +94,7 @@ pub struct Drive {
     pub id: i64,
     pub date: chrono::NaiveDate,
     pub deadline: Option<chrono::NaiveDateTime>,
-    pub registration_cap: Option<u64>,
+    pub registration_cap: Option<u32>,
 }
 
 /// How a person uses the bus on a specfic date.
@@ -233,6 +233,25 @@ pub fn search_registrations(
         })
         .map(Result::unwrap)
         .collect())
+}
+
+pub fn count_registrations(
+    conn: &mut rusqlite::Connection,
+    drivedate: chrono::NaiveDate,
+) -> Result<u32, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT count()
+        FROM drive
+        NATURAL JOIN registration
+        WHERE registered AND drivedate == :date;",
+    )?;
+    let mut query = statement.query(named_params! {
+        ":date": drivedate,
+    })?;
+    query
+        .next()?
+        .expect("SQL count() function creating exactly one row")
+        .get(0)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

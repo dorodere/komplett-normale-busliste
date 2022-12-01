@@ -187,7 +187,7 @@ pub struct UpdateDrive {
     id: i64,
     date: time::Date,
     deadline: time::PrimitiveDateTime,
-    registration_cap: Option<u64>,
+    registration_cap: Option<u32>,
 }
 
 #[post("/drive/update", data = "<update>")]

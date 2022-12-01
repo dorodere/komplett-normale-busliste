@@ -177,6 +177,20 @@ async fn register(
         ));
     }
 
+    let count_already_registered = conn
+        .run(move |c| sql_interface::count_registrations(c, query_date))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while counting registrations for '{}': {}",
+                    query_date, err
+                ),
+                "ein Fehler trat während des Zählens der bereits existierenden Registrierungen auf",
+            )
+        })?;
+    dbg!(count_already_registered);
+
     let update = registration.to_registration_update(&user);
     match conn
         .run(move |c| sql_interface::update_registration(c, &update))
