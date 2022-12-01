@@ -509,21 +509,30 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rus
     })
 }
 
-pub fn get_drive_deadline(
+pub fn get_drive(
     conn: &mut rusqlite::Connection,
     date: chrono::NaiveDate,
-) -> Result<Option<chrono::NaiveDateTime>, rusqlite::Error> {
+) -> Result<Option<Drive>, rusqlite::Error> {
     let mut statement = conn.prepare(
-        "SELECT deadline
+        "SELECT drive_id, drivedate, deadline, registration_cap
         FROM drive
         WHERE drivedate == :date",
     )?;
-    let mut query = statement.query(named_params! {
-        ":date": date
-    })?;
+    let mut query = statement.query_map(
+        named_params! {
+            ":date": date
+        },
+        |row| {
+            Ok(Drive {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                deadline: row.get(2)?,
+                registration_cap: row.get(3)?,
+            })
+        },
+    )?;
 
-    let row = query.next()?.unwrap();
-    row.get(0)
+    query.next().transpose()
 }
 
 #[derive(Debug, Error)]

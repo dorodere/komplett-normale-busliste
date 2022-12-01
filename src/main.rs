@@ -150,8 +150,8 @@ async fn register(
     registration: Form<Strict<Registration>>,
 ) -> Result<Redirect, Flash<Redirect>> {
     let query_date = time_to_chrono_date(registration.date);
-    let deadline = conn
-        .run(move |c| sql_interface::get_drive_deadline(c, query_date))
+    let drive = conn
+        .run(move |c| sql_interface::get_drive(c, query_date))
         .await
         .map_err(|err| {
             server_error(
@@ -162,15 +162,20 @@ async fn register(
                 "ein Fehler trat während des Abfragens der Anmeldungsdeadline auf",
             )
         })?
-        .unwrap_or_else(|| {
-            time_to_chrono_date(registration.date)
-                .and_hms_opt(0, 0, 0)
-                .unwrap()
-        });
+        .ok_or_else(|| {
+            Flash::error(
+                Redirect::to(uri!(dashboard)),
+                "Das Datum der Fahrt ist nicht valide, versuch es nochmal.",
+            )
+        })?;
 
     let now = Utc::now().naive_utc();
 
-    if deadline <= now {
+    if drive
+        .deadline
+        .unwrap_or_else(|| drive.date.and_hms_opt(0, 0, 0).unwrap())
+        <= now
+    {
         return Err(Flash::error(
             Redirect::to(uri!(dashboard)),
             "Die Deadline für diese Fahrt ist bereits abgelaufen.",
@@ -189,7 +194,19 @@ async fn register(
                 "ein Fehler trat während des Zählens der bereits existierenden Registrierungen auf",
             )
         })?;
-    dbg!(count_already_registered);
+
+    // is this registration changing to true & would this exceed the cap?
+    if registration.new_state
+        && drive
+            .registration_cap
+            .map(|cap| count_already_registered >= cap)
+            .unwrap_or(false)
+    {
+        return Err(Flash::error(
+            Redirect::to(uri!(dashboard)),
+            "Das Limit von möglichen Anmeldungen für diese Fahrt wurde bereits erreicht.",
+        ));
+    }
 
     let update = registration.to_registration_update(&user);
     match conn
