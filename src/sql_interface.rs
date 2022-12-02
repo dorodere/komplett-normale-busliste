@@ -336,17 +336,17 @@ pub fn update_registration(
     match_constraint_violation!(
         conn.execute(
             "INSERT INTO registration (person_id, drive_id, registered)
-        VALUES (
-            :person_id,
-            (
-                SELECT drive_id
-                FROM drive
-                WHERE drivedate == :date
-            ),
-            :registered
-        )
-        ON CONFLICT(person_id, drive_id)
-              DO UPDATE SET registered=:registered",
+            VALUES (
+                :person_id,
+                (
+                    SELECT drive_id
+                    FROM drive
+                    WHERE drivedate == :date
+                ),
+                :registered
+            )
+            ON CONFLICT(person_id, drive_id)
+            DO UPDATE SET registered=:registered",
             named_params! {
                 ":person_id": registration.person_id,
                 ":date": registration.date,
