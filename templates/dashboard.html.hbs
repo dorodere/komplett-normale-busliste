@@ -24,37 +24,42 @@
 		</div>
 
 		<div class="functionality-section">
-			<h2>Zukünftige Busfahrten</h2>
+			<h2>Veränderbare Busfahrten</h2>
 			{{#if accessible_regs}}
 				<table>
 					<thead>
 						<tr>
+							<th class="toggle-button"></th>
 							<th>Datum</th>
 							<th>Bist du angemeldet?</th>
 						</tr>
 					</thead>
 					<tbody>
-							{{#each accessible_regs}}
-								<tr>
-									<td>{{this.pretty_date}}</td>
-									{{#if this.registration.registered}}
-										<td class="highlight-positive">Ja</td>
-									{{else}}
-										<td class="highlight-negative">Nein</td>
-									{{/if}}
-									<td class="toggle-button">
-										<form action="/register" method="post">
-											{{#if this.registration.registered}}
-												<input type="hidden" name="new_state" value="false"/>
-											{{else}}
-												<input type="hidden" name="new_state" value="true"/>
-											{{/if}}
-											<input type="hidden" name="date" value="{{this.registration.drive.date}}"/>
-											<button>Ändern</button>
-										</form>
-									</td>
-								</tr>
-							{{/each}}
+						{{#each accessible_regs}}
+							<tr>
+								<td style="min-width: max-content;">
+									{{this.registration.already_registered}}
+									/ {{this.registration.drive.registration_cap}}
+								</td>
+								<td>{{this.pretty_date}}</td>
+								{{#if this.registration.registered}}
+									<td class="highlight-positive">Ja</td>
+								{{else}}
+									<td class="highlight-negative">Nein</td>
+								{{/if}}
+								<td class="toggle-button">
+									<form action="/register" method="post">
+										{{#if this.registration.registered}}
+											<input type="hidden" name="new_state" value="false"/>
+										{{else}}
+											<input type="hidden" name="new_state" value="true"/>
+										{{/if}}
+										<input type="hidden" name="date" value="{{this.registration.drive.date}}"/>
+										<button>Ändern</button>
+									</form>
+								</td>
+							</tr>
+						{{/each}}
 					</tbody>
 				</table>
 			{{else}}
@@ -70,6 +75,7 @@
 				<table>
 					<thead>
 						<tr>
+							<th class="toggle-button"></th>
 							<th>Datum</th>
 							<th>Warst du angemeldet?</th>
 						</tr>
@@ -77,6 +83,10 @@
 					<tbody>
 						{{#each locked_regs}}
 							<tr>
+								<td style="min-width: max-content;">
+									{{this.registration.already_registered}}
+									/ {{this.registration.drive.registration_cap}}
+								</td>
 								<td>{{this.pretty_date}}</td>
 								{{#if this.registration.registered}}
 									<td class="highlight-positive">Ja</td>

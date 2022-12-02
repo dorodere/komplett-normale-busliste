@@ -221,16 +221,23 @@ pub fn search_registrations(
                 registration.drive_id == drive.drive_id
                 AND registration.person_id == person.person_id
             )
-            {}",
+            {}
+            ORDER BY drive.drivedate",
             match filter {
                 AvailabilityFilter::OnlyAccessible =>
                     "WHERE :now < drive.deadline
                         AND :now < drive.drivedate
-                        AND already_registered_count < drive.registration_cap",
+                        AND (
+                            already_registered_count < drive.registration_cap
+                            OR registration.registered
+                        )",
                 AvailabilityFilter::OnlyLocked =>
                     "WHERE drive.deadline <= :now
                         OR drive.drivedate <= :now
-                        OR drive.registration_cap <= already_registered_count",
+                        OR (
+                            drive.registration_cap <= already_registered_count
+                            AND not registration.registered
+                        )",
                 AvailabilityFilter::ListAll => "",
             },
         )),
