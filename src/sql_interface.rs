@@ -106,6 +106,10 @@ pub struct Registration {
 
     pub date: chrono::NaiveDate,
     pub registered: bool,
+
+    /// How many persons are already registered for this drive, not excluding this
+    /// potential one.
+    pub already_registered: u32,
 }
 
 /// Parameters needed to update a specific registration.
@@ -179,7 +183,13 @@ pub fn search_registrations(
     let mut statement = match by {
         SearchRegistrationsBy::Date(_) => conn.prepare(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, :date
+                registration.registered, :date,
+                (
+                    SELECT count()
+                    FROM drive AS drive_subquery
+                    NATURAL JOIN registration
+                    WHERE registered AND drive_subquery.drivedate == drive.drivedate
+                ) AS already_registered_count
             FROM person
             LEFT OUTER JOIN drive ON (drive.drivedate == :date)
             LEFT OUTER JOIN registration ON (
@@ -191,15 +201,20 @@ pub fn search_registrations(
         ),
         SearchRegistrationsBy::PersonId { filter, .. } => conn.prepare(&format!(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, drive.drivedate
+                registration.registered, drive.drivedate,
+                (
+                    SELECT count()
+                    FROM drive AS drive_subquery
+                    NATURAL JOIN registration
+                    WHERE registered AND drive_subquery.drivedate == drive.drivedate
+                ) AS already_registered_count
             FROM drive
             LEFT OUTER JOIN person ON (person.person_id == :id)
             LEFT OUTER JOIN registration ON (
                 registration.drive_id == drive.drive_id
                 AND registration.person_id == person.person_id
             )
-            {}
-            ORDER BY person.name",
+            {}",
             match filter {
                 DeadlineFilter::OnlyAccessible =>
                     "WHERE :now < drive.deadline AND :now < drive.drivedate",
@@ -229,6 +244,7 @@ pub fn search_registrations(
                 person: row_to_person(row)?,
                 registered: false_if_null(row.get(5))?,
                 date: row.get(6)?,
+                already_registered: row.get(7)?,
             })
         })
         .map(Result::unwrap)
@@ -243,7 +259,7 @@ pub fn count_registrations(
         "SELECT count()
         FROM drive
         NATURAL JOIN registration
-        WHERE registered AND drivedate == :date;",
+        WHERE registered AND drivedate == :date",
     )?;
     let mut query = statement.query(named_params! {
         ":date": drivedate,
