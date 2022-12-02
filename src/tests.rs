@@ -1,6 +1,6 @@
 use {
     super::sql_interface::{
-        self, DeadlineFilter, NewPerson, RegistrationUpdate,
+        self, AvailabilityFilter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
         UpdatePerson, VisibilityFilter,
@@ -117,7 +117,7 @@ fn register() {
     let regs = sql_interface::search_registrations(&mut conn, &Date(date)).unwrap();
     assert_eq!(regs.len(), 2);
     let reg = &regs[1]; // relying explicitly on sorting
-    assert_eq!(reg.date, date);
+    assert_eq!(reg.drive.date, date);
     assert_eq!(reg.person.prename, "Bob");
     assert!(reg.registered);
 
@@ -125,13 +125,13 @@ fn register() {
         &mut conn,
         &PersonId {
             id: bob.id,
-            filter: DeadlineFilter::ListAll,
+            filter: AvailabilityFilter::ListAll,
         },
     )
     .unwrap();
     assert_eq!(regs.len(), 1);
     let reg = &regs[0];
-    assert_eq!(reg.date, date);
+    assert_eq!(reg.drive.date, date);
     assert_eq!(reg.person.prename, "Bob");
     assert!(reg.registered);
 }

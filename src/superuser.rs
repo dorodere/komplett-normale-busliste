@@ -4,7 +4,7 @@ use {
         date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
         format_date, server_error,
         sql_interface::{
-            self, DeadlineFilter, InsertDriveError, Person, Registration, SearchPersonBy,
+            self, AvailabilityFilter, InsertDriveError, Person, Registration, SearchPersonBy,
             SearchRegistrationsBy, UpdateDriveError, VisibilityFilter,
         },
         BususagesDBConn,
@@ -425,7 +425,7 @@ pub async fn introspect_person(
                 c,
                 &SearchRegistrationsBy::PersonId {
                     id,
-                    filter: DeadlineFilter::ListAll,
+                    filter: AvailabilityFilter::ListAll,
                 },
             )
         })
@@ -456,7 +456,7 @@ pub async fn introspect_person(
     let registrations: Vec<_> = registrations
         .into_iter()
         .map(|r| TemplateRegistration {
-            pretty_date: format_date(r.date),
+            pretty_date: format_date(r.drive.date),
             registration: r,
         })
         .collect();

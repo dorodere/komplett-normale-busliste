@@ -100,11 +100,15 @@ pub struct Drive {
 /// How a person uses the bus on a specfic date.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Registration {
-    // The person which registered the bususage. `token` and `token_expiration` are set to
-    // [`Option::None`] because they're irrelevant.
+    /// The person which registered the bususage. `token` and `token_expiration` are set to
+    /// [`Option::None`] because they're irrelevant.
     pub person: Person,
 
-    pub date: chrono::NaiveDate,
+    /// The drive this registration is for.
+    pub drive: Drive,
+
+    /// Whether or not this registration denotes that the person drives. False means that
+    /// this person doesn't drive on that day.
     pub registered: bool,
 
     /// How many persons are already registered for this drive, not excluding this
@@ -158,7 +162,8 @@ pub fn init_db_if_necessary(
     }
 }
 
-pub enum DeadlineFilter {
+#[derive(Copy, Clone, Debug)]
+pub enum AvailabilityFilter {
     OnlyAccessible,
     OnlyLocked,
     ListAll,
@@ -170,7 +175,7 @@ pub enum SearchRegistrationsBy {
     Date(chrono::NaiveDate),
 
     /// Searches the registrations by person id.
-    PersonId { id: i64, filter: DeadlineFilter },
+    PersonId { id: i64, filter: AvailabilityFilter },
 }
 
 /// Creates a vector of [`Registration`]s filtered by the given criteria.
@@ -183,7 +188,8 @@ pub fn search_registrations(
     let mut statement = match by {
         SearchRegistrationsBy::Date(_) => conn.prepare(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, :date,
+                drive.drive_id, :date, drive.deadline, drive.registration_cap,
+                registration.registered,
                 (
                     SELECT count()
                     FROM drive AS drive_subquery
@@ -201,7 +207,8 @@ pub fn search_registrations(
         ),
         SearchRegistrationsBy::PersonId { filter, .. } => conn.prepare(&format!(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, drive.drivedate,
+                drive.drive_id, drive.drivedate, drive.deadline, drive.registration_cap,
+                registration.registered, 
                 (
                     SELECT count()
                     FROM drive AS drive_subquery
@@ -216,11 +223,15 @@ pub fn search_registrations(
             )
             {}",
             match filter {
-                DeadlineFilter::OnlyAccessible =>
-                    "WHERE :now < drive.deadline AND :now < drive.drivedate",
-                DeadlineFilter::OnlyLocked =>
-                    "WHERE drive.deadline <= :now OR drive.drivedate <= :now",
-                DeadlineFilter::ListAll => "",
+                AvailabilityFilter::OnlyAccessible =>
+                    "WHERE :now < drive.deadline
+                        AND :now < drive.drivedate
+                        AND already_registered_count < drive.registration_cap",
+                AvailabilityFilter::OnlyLocked =>
+                    "WHERE drive.deadline <= :now
+                        OR drive.drivedate <= :now
+                        OR drive.registration_cap <= already_registered_count",
+                AvailabilityFilter::ListAll => "",
             },
         )),
     }?;
@@ -228,23 +239,28 @@ pub fn search_registrations(
         SearchRegistrationsBy::Date(date) => statement.query(named_params! { ":date": date }),
         SearchRegistrationsBy::PersonId {
             id,
-            filter: DeadlineFilter::OnlyLocked | DeadlineFilter::OnlyAccessible,
+            filter: AvailabilityFilter::OnlyLocked | AvailabilityFilter::OnlyAccessible,
         } => {
             let now = Utc::now().naive_utc().date();
             statement.query(named_params! { ":id": id, ":now": now })
         }
         SearchRegistrationsBy::PersonId {
             id,
-            filter: DeadlineFilter::ListAll,
+            filter: AvailabilityFilter::ListAll,
         } => statement.query(named_params! { ":id": id }),
     }?;
     Ok(rows
         .mapped(|row| {
             Ok(Registration {
                 person: row_to_person(row)?,
-                registered: false_if_null(row.get(5))?,
-                date: row.get(6)?,
-                already_registered: row.get(7)?,
+                drive: Drive {
+                    id: row.get(5)?,
+                    date: row.get(6)?,
+                    deadline: row.get(7)?,
+                    registration_cap: row.get(8)?,
+                },
+                registered: false_if_null(row.get(9))?,
+                already_registered: row.get(10)?,
             })
         })
         .map(Result::unwrap)

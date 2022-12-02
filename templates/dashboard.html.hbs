@@ -49,7 +49,7 @@
 											{{else}}
 												<input type="hidden" name="new_state" value="true"/>
 											{{/if}}
-											<input type="hidden" name="date" value="{{this.registration.date}}"/>
+											<input type="hidden" name="date" value="{{this.registration.drive.date}}"/>
 											<button>Ändern</button>
 										</form>
 									</td>
@@ -83,6 +83,7 @@
 								{{else}}
 									<td class="highlight-negative">Nein</td>
 								{{/if}}
+								<td class="toggle-button note"><i>{{this.locked_reason}}</i></td>
 							</tr>
 						{{/each}}
 					</tbody>

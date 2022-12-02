@@ -24,7 +24,7 @@ use {
     rocket_dyn_templates::{context, handlebars::handlebars_helper, Template},
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
-    sql_interface::{ApplyRegistrationError, DeadlineFilter, SearchRegistrationsBy},
+    sql_interface::{ApplyRegistrationError, AvailabilityFilter, SearchRegistrationsBy},
     std::fmt,
 };
 
@@ -63,15 +63,19 @@ async fn dashboard(
     #[derive(Debug, Serialize)]
     struct TemplateRegistration {
         pretty_date: String,
+        locked_reason: Option<String>,
         registration: sql_interface::Registration,
     }
 
     let mut registrations = [Vec::new(), Vec::new()];
     let person_id = user.person_id();
 
-    for (i, filter) in [DeadlineFilter::OnlyAccessible, DeadlineFilter::OnlyLocked]
-        .into_iter()
-        .enumerate()
+    for (i, filter) in [
+        AvailabilityFilter::OnlyAccessible,
+        AvailabilityFilter::OnlyLocked,
+    ]
+    .into_iter()
+    .enumerate()
     {
         let from_db = conn
             .run(move |c| {
@@ -94,7 +98,16 @@ async fn dashboard(
         let as_template = from_db
             .into_iter()
             .map(|registration| TemplateRegistration {
-                pretty_date: format_date(registration.date),
+                pretty_date: format_date(registration.drive.date),
+                locked_reason: match filter {
+                    AvailabilityFilter::OnlyAccessible => None,
+                    AvailabilityFilter::OnlyLocked => Some(
+                        possible_to_register(&registration.drive, registration.already_registered)
+                            .expect_err("drive to be locked")
+                            .to_string(),
+                    ),
+                    _ => unreachable!(),
+                },
                 registration,
             })
             .collect();
@@ -169,20 +182,7 @@ async fn register(
             )
         })?;
 
-    let now = Utc::now().naive_utc();
-
-    if drive
-        .deadline
-        .unwrap_or_else(|| drive.date.and_hms_opt(0, 0, 0).unwrap())
-        <= now
-    {
-        return Err(Flash::error(
-            Redirect::to(uri!(dashboard)),
-            "Die Deadline für diese Fahrt ist bereits abgelaufen.",
-        ));
-    }
-
-    let count_already_registered = conn
+    let already_registered = conn
         .run(move |c| sql_interface::count_registrations(c, query_date))
         .await
         .map_err(|err| {
@@ -195,17 +195,10 @@ async fn register(
             )
         })?;
 
-    // is this registration changing to true & would this exceed the cap?
-    if registration.new_state
-        && drive
-            .registration_cap
-            .map(|cap| count_already_registered >= cap)
-            .unwrap_or(false)
-    {
-        return Err(Flash::error(
-            Redirect::to(uri!(dashboard)),
-            "Das Limit von möglichen Anmeldungen für diese Fahrt wurde bereits erreicht.",
-        ));
+    // before going home with it, let's check if it's even possible to register
+    if registration.new_state {
+        possible_to_register(&drive, already_registered)
+            .map_err(|reason| Flash::error(Redirect::to(uri!(dashboard)), reason.to_string()))?;
     }
 
     let update = registration.to_registration_update(&user);
@@ -229,6 +222,48 @@ async fn register(
     };
 
     Ok(Redirect::to(uri!(dashboard)))
+}
+
+enum ImpossibleReason {
+    RegistrationCapReached,
+    DeadlineExpired,
+}
+
+impl fmt::Display for ImpossibleReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DeadlineExpired => {
+                write!(f, "Die Deadline für diese Fahrt ist bereits abgelaufen")
+            }
+            Self::RegistrationCapReached => write!(
+                f,
+                "Maximale Anzahl von Registrierungen für diese Fahrt erreicht"
+            ),
+        }
+    }
+}
+
+fn possible_to_register(
+    drive: &sql_interface::Drive,
+    already_registered: u32,
+) -> Result<(), ImpossibleReason> {
+    let now = Utc::now().naive_utc();
+
+    if drive
+        .deadline
+        .map(|deadline| deadline < now)
+        .unwrap_or(false)
+    {
+        Err(ImpossibleReason::DeadlineExpired)
+    } else if drive
+        .registration_cap
+        .map(|cap| cap <= already_registered)
+        .unwrap_or(false)
+    {
+        Err(ImpossibleReason::RegistrationCapReached)
+    } else {
+        Ok(())
+    }
 }
 
 #[launch]
