@@ -228,7 +228,10 @@ pub fn search_registrations(
                         AND :now < drive.drivedate
                         AND (
                             already_registered_count < drive.registration_cap
-                            OR registration.registered
+                            OR CASE
+                                WHEN registration.registered IS NULL THEN false
+                                ELSE registration.registered
+                            END
                         )
                     ORDER BY drive.drivedate ASC",
                 AvailabilityFilter::OnlyLocked =>
@@ -237,7 +240,10 @@ pub fn search_registrations(
                         AND :now < drive.drivedate
                         AND (
                             already_registered_count < drive.registration_cap
-                            OR registration.registered
+                            OR CASE
+                                WHEN registration.registered IS NULL THEN false
+                                ELSE registration.registered
+                            END
                         )
                     )
                     ORDER BY drive.drivedate DESC",

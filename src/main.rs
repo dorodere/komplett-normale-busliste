@@ -233,12 +233,9 @@ impl fmt::Display for ImpossibleReason {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DeadlineExpired => {
-                write!(f, "Die Deadline für diese Fahrt ist bereits abgelaufen")
+                write!(f, "Deadline ist abgelaufen")
             }
-            Self::RegistrationCapReached => write!(
-                f,
-                "Maximale Anzahl von Registrierungen für diese Fahrt erreicht"
-            ),
+            Self::RegistrationCapReached => write!(f, "Maximale Registrierungen erreicht"),
         }
     }
 }
