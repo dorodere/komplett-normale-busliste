@@ -205,6 +205,7 @@ pub async fn update_deadline(
         date: time_to_chrono_date(update.date),
         deadline: Some(time_to_chrono_datetime(update.deadline)),
         registration_cap: update.registration_cap,
+        already_registered_count: 0,
     };
 
     let closure_update = update.clone();

@@ -61,8 +61,9 @@
 									<td>
 										<input form="future-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
 									</td>
-									<td>
-										<input form="future-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{this.registration_cap}}"/>
+									<td style="display: flex;">
+										<p style="width: max-content;">{{already_registered_count}} /</p>
+										<input form="future-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
 									</td>
 
 									<td class="toggle-button">
@@ -117,8 +118,9 @@
 									<td>
 										<input form="past-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
 									</td>
-									<td>
-										<input form="future-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{this.registration_cap}}"/>
+									<td style="display: flex;">
+										<p style="width: max-content;">{{already_registered_count}} /</p>
+										<input form="past-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
 									</td>
 
 									<td class="toggle-button">

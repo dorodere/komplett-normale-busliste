@@ -95,6 +95,7 @@ pub struct Drive {
     pub date: chrono::NaiveDate,
     pub deadline: Option<chrono::NaiveDateTime>,
     pub registration_cap: Option<u32>,
+    pub already_registered_count: u32,
 }
 
 /// How a person uses the bus on a specfic date.
@@ -110,10 +111,6 @@ pub struct Registration {
     /// Whether or not this registration denotes that the person drives. False means that
     /// this person doesn't drive on that day.
     pub registered: bool,
-
-    /// How many persons are already registered for this drive, not excluding this
-    /// potential one.
-    pub already_registered: u32,
 }
 
 /// Parameters needed to update a specific registration.
@@ -208,13 +205,13 @@ pub fn search_registrations(
         SearchRegistrationsBy::PersonId { filter, .. } => conn.prepare(&format!(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
                 drive.drive_id, drive.drivedate, drive.deadline, drive.registration_cap,
-                registration.registered, 
                 (
                     SELECT count()
                     FROM drive AS drive_subquery
                     NATURAL JOIN registration
                     WHERE registered AND drive_subquery.drivedate == drive.drivedate
-                ) AS already_registered_count
+                ) AS already_registered_count,
+                registration.registered
             FROM drive
             LEFT OUTER JOIN person ON (person.person_id == :id)
             LEFT OUTER JOIN registration ON (
@@ -256,32 +253,13 @@ pub fn search_registrations(
                     date: row.get(6)?,
                     deadline: row.get(7)?,
                     registration_cap: row.get(8)?,
+                    already_registered_count: row.get(9)?,
                 },
-                registered: false_if_null(row.get(9))?,
-                already_registered: row.get(10)?,
+                registered: false_if_null(row.get(10))?,
             })
         })
         .map(Result::unwrap)
         .collect())
-}
-
-pub fn count_registrations(
-    conn: &mut rusqlite::Connection,
-    drivedate: chrono::NaiveDate,
-) -> Result<u32, rusqlite::Error> {
-    let mut statement = conn.prepare(
-        "SELECT count()
-        FROM drive
-        NATURAL JOIN registration
-        WHERE registered AND drivedate == :date",
-    )?;
-    let mut query = statement.query(named_params! {
-        ":date": drivedate,
-    })?;
-    query
-        .next()?
-        .expect("SQL count() function creating exactly one row")
-        .get(0)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -537,7 +515,13 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rus
     let now = Utc::now().naive_local().date();
     let time_slices = ["drivedate < :now", ":now <= drivedate"].map(|condition| {
         let mut statement = conn.prepare(&format!(
-            "SELECT drive_id, drivedate, deadline, registration_cap
+            "SELECT drive_id, drivedate, deadline, registration_cap,
+                (
+                    SELECT count()
+                    FROM drive AS drive_inner
+                    NATURAL JOIN registration
+                    WHERE registered AND drive_inner.drive_id == drive.drive_id
+                ) AS already_registered_count
             FROM drive
             WHERE {}",
             condition,
@@ -553,6 +537,7 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rus
                     date: row.get(1)?,
                     deadline: row.get(2)?,
                     registration_cap: row.get(3)?,
+                    already_registered_count: row.get(4)?,
                 })
             },
         )?;
@@ -572,7 +557,13 @@ pub fn get_drive(
     date: chrono::NaiveDate,
 ) -> Result<Option<Drive>, rusqlite::Error> {
     let mut statement = conn.prepare(
-        "SELECT drive_id, drivedate, deadline, registration_cap
+        "SELECT drive_id, drivedate, deadline, registration_cap,
+            (
+                SELECT count()
+                FROM drive
+                NATURAL JOIN registration
+                WHERE registered AND drivedate == :date
+            ) AS already_registered_count
         FROM drive
         WHERE drivedate == :date",
     )?;
@@ -586,6 +577,7 @@ pub fn get_drive(
                 date: row.get(1)?,
                 deadline: row.get(2)?,
                 registration_cap: row.get(3)?,
+                already_registered_count: row.get(4)?,
             })
         },
     )?;

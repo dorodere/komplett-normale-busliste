@@ -96,13 +96,9 @@ async fn dashboard(
             .into_iter()
             .map(|registration| TemplateRegistration {
                 pretty_date: format_date(registration.drive.date),
-                locked_reason: possible_to_register(
-                    &registration.drive,
-                    registration.already_registered,
-                    !registration.registered,
-                )
-                .err()
-                .map(|reason| reason.to_string()),
+                locked_reason: possible_to_register(&registration.drive, !registration.registered)
+                    .err()
+                    .map(|reason| reason.to_string()),
                 registration,
             })
             .collect();
@@ -196,23 +192,10 @@ async fn register(
         return Ok(Redirect::to(uri!(dashboard)));
     }
 
-    let already_registered_count = conn
-        .run(move |c| sql_interface::count_registrations(c, query_date))
-        .await
-        .map_err(|err| {
-            server_error(
-                format!(
-                    "Error while counting registrations for '{}': {}",
-                    query_date, err
-                ),
-                "ein Fehler trat während des Zählens der bereits existierenden Registrierungen auf",
-            )
-        })?;
-
     // before going home with it, let's check if it's even possible to register
     if registration.new_state {
         // TODO: check in the db if the registration is really what the user suggests
-        possible_to_register(&drive, already_registered_count, currently_registered)
+        possible_to_register(&drive, currently_registered)
             .map_err(|reason| Flash::error(Redirect::to(uri!(dashboard)), reason.to_string()))?;
     }
 
@@ -257,7 +240,6 @@ impl fmt::Display for ImpossibleReason {
 
 fn possible_to_register(
     drive: &sql_interface::Drive,
-    already_registered: u32,
     wants_to_register: bool,
 ) -> Result<(), ImpossibleReason> {
     let now = Utc::now().naive_utc();
@@ -271,7 +253,7 @@ fn possible_to_register(
     } else if wants_to_register
         && drive
             .registration_cap
-            .map(|cap| cap <= already_registered)
+            .map(|cap| cap <= drive.already_registered_count)
             .unwrap_or(false)
     {
         Err(ImpossibleReason::RegistrationCapReached)

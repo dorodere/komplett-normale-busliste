@@ -38,7 +38,7 @@
 						{{#each future_regs}}
 							<tr>
 								<td style="min-width: max-content;">
-									{{this.registration.already_registered}}
+									{{this.registration.drive.already_registered_count}}
 									/ {{this.registration.drive.registration_cap}}
 								</td>
 								<td>{{this.pretty_date}}</td>
@@ -96,7 +96,7 @@
 						{{#each past_regs}}
 							<tr>
 								<td style="min-width: max-content;">
-									{{this.registration.already_registered}}
+									{{this.registration.drive.already_registered_count}}
 									/ {{this.registration.drive.registration_cap}}
 								</td>
 								<td>{{this.pretty_date}}</td>
