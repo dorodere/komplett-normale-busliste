@@ -387,15 +387,21 @@ pub fn update_registration(
     )
 }
 
+/// Checks whether the person is registered for the drive. Does NOT check for validity of the
+/// person ID, just returns `false` if invalid.
 pub fn is_registered(
     conn: &mut rusqlite::Connection,
     person_id: i64,
     drivedate: chrono::NaiveDate,
-) -> Result<Option<bool>, rusqlite::Error> {
+) -> Result<bool, rusqlite::Error> {
     let mut statement = conn.prepare(
-        "SELECT registered
-        FROM registration
-        NATURAL JOIN drive
+        "SELECT
+            CASE
+                WHEN registered IS NULL THEN false
+                ELSE registered
+            END
+        FROM drive
+        NATURAL JOIN registration
         WHERE registration.person_id == :id AND drive.drivedate == :date",
     )?;
     let mut query = statement.query_map(
@@ -403,10 +409,10 @@ pub fn is_registered(
             ":id": person_id,
             ":date": drivedate,
         },
-        |row| Ok(row.get(0)?),
+        |row| row.get(0),
     )?;
 
-    query.next().transpose()
+    query.next().unwrap_or(Ok(false))
 }
 
 pub enum SearchPersonBy {

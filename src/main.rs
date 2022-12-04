@@ -189,8 +189,7 @@ async fn register(
                 ),
                 "ein Fehler trat während des Abprüfens der aktuellen Registrierung auf",
             )
-        })?
-        .expect("user to be authenticated correctly");
+        })?;
 
     if currently_registered == registration.new_state {
         // registration would be a no-op
