@@ -81,8 +81,14 @@ button {
 	padding-right: 8px;
 }
 
-button:hover {
+button:not(:disabled):hover {
 	animation: 0.19s button-hover ease-out both;
+}
+
+button:disabled {
+	animation: none;
+	color: #848283;
+	background-color: #151515;
 }
 
 p {

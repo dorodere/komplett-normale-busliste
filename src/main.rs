@@ -24,7 +24,7 @@ use {
     rocket_dyn_templates::{context, handlebars::handlebars_helper, Template},
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
-    sql_interface::{ApplyRegistrationError, AvailabilityFilter, SearchRegistrationsBy},
+    sql_interface::{ApplyRegistrationError, DriveFilter, SearchRegistrationsBy},
     std::fmt,
 };
 
@@ -70,12 +70,9 @@ async fn dashboard(
     let mut registrations = [Vec::new(), Vec::new()];
     let person_id = user.person_id();
 
-    for (i, filter) in [
-        AvailabilityFilter::OnlyAccessible,
-        AvailabilityFilter::OnlyLocked,
-    ]
-    .into_iter()
-    .enumerate()
+    for (i, filter) in [DriveFilter::OnlyFuture, DriveFilter::OnlyPast]
+        .into_iter()
+        .enumerate()
     {
         let from_db = conn
             .run(move |c| {
@@ -99,15 +96,13 @@ async fn dashboard(
             .into_iter()
             .map(|registration| TemplateRegistration {
                 pretty_date: format_date(registration.drive.date),
-                locked_reason: match filter {
-                    AvailabilityFilter::OnlyAccessible => None,
-                    AvailabilityFilter::OnlyLocked => Some(
-                        possible_to_register(&registration.drive, registration.already_registered)
-                            .expect_err("drive to be locked")
-                            .to_string(),
-                    ),
-                    _ => unreachable!(),
-                },
+                locked_reason: possible_to_register(
+                    &registration.drive,
+                    registration.already_registered,
+                    !registration.registered,
+                )
+                .err()
+                .map(|reason| reason.to_string()),
                 registration,
             })
             .collect();
@@ -116,14 +111,14 @@ async fn dashboard(
     }
 
     let flash = flash.map(|flashmsg| flashmsg.message().to_string());
-    let [accessible_regs, locked_regs] = registrations;
+    let [future_regs, past_regs] = registrations;
 
     Ok(Template::render(
         "dashboard",
         context! {
             flash,
-            accessible_regs,
-            locked_regs,
+            future_regs,
+            past_regs,
             show_superuser_controls: superuser.is_some(),
         },
     ))
@@ -182,7 +177,27 @@ async fn register(
             )
         })?;
 
-    let already_registered = conn
+    let person_id = user.person_id();
+    let currently_registered = conn
+        .run(move |c| sql_interface::is_registered(c, person_id, drive.date))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while querying registration for {} on {}: {}",
+                    person_id, registration.date, err
+                ),
+                "ein Fehler trat während des Abprüfens der aktuellen Registrierung auf",
+            )
+        })?
+        .expect("user to be authenticated correctly");
+
+    if currently_registered == registration.new_state {
+        // registration would be a no-op
+        return Ok(Redirect::to(uri!(dashboard)));
+    }
+
+    let already_registered_count = conn
         .run(move |c| sql_interface::count_registrations(c, query_date))
         .await
         .map_err(|err| {
@@ -197,7 +212,8 @@ async fn register(
 
     // before going home with it, let's check if it's even possible to register
     if registration.new_state {
-        possible_to_register(&drive, already_registered)
+        // TODO: check in the db if the registration is really what the user suggests
+        possible_to_register(&drive, already_registered_count, currently_registered)
             .map_err(|reason| Flash::error(Redirect::to(uri!(dashboard)), reason.to_string()))?;
     }
 
@@ -243,6 +259,7 @@ impl fmt::Display for ImpossibleReason {
 fn possible_to_register(
     drive: &sql_interface::Drive,
     already_registered: u32,
+    wants_to_register: bool,
 ) -> Result<(), ImpossibleReason> {
     let now = Utc::now().naive_utc();
 
@@ -252,10 +269,11 @@ fn possible_to_register(
         .unwrap_or(false)
     {
         Err(ImpossibleReason::DeadlineExpired)
-    } else if drive
-        .registration_cap
-        .map(|cap| cap <= already_registered)
-        .unwrap_or(false)
+    } else if wants_to_register
+        && drive
+            .registration_cap
+            .map(|cap| cap <= already_registered)
+            .unwrap_or(false)
     {
         Err(ImpossibleReason::RegistrationCapReached)
     } else {

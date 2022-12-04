@@ -1,6 +1,6 @@
 use {
     super::sql_interface::{
-        self, AvailabilityFilter, NewPerson, RegistrationUpdate,
+        self, DriveFilter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
         UpdatePerson, VisibilityFilter,
@@ -125,7 +125,7 @@ fn register() {
         &mut conn,
         &PersonId {
             id: bob.id,
-            filter: AvailabilityFilter::ListAll,
+            filter: DriveFilter::ListAll,
         },
     )
     .unwrap();

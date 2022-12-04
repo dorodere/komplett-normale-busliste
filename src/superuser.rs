@@ -4,7 +4,7 @@ use {
         date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
         format_date, server_error,
         sql_interface::{
-            self, AvailabilityFilter, InsertDriveError, Person, Registration, SearchPersonBy,
+            self, DriveFilter, InsertDriveError, Person, Registration, SearchPersonBy,
             SearchRegistrationsBy, UpdateDriveError, VisibilityFilter,
         },
         BususagesDBConn,
@@ -425,7 +425,7 @@ pub async fn introspect_person(
                 c,
                 &SearchRegistrationsBy::PersonId {
                     id,
-                    filter: AvailabilityFilter::ListAll,
+                    filter: DriveFilter::ListAll,
                 },
             )
         })

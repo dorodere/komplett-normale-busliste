@@ -24,8 +24,8 @@
 		</div>
 
 		<div class="functionality-section">
-			<h2>Veränderbare Busfahrten</h2>
-			{{#if accessible_regs}}
+			<h2>Zukünftige Busfahrten</h2>
+			{{#if future_regs}}
 				<table>
 					<thead>
 						<tr>
@@ -35,7 +35,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{{#each accessible_regs}}
+						{{#each future_regs}}
 							<tr>
 								<td style="min-width: max-content;">
 									{{this.registration.already_registered}}
@@ -55,7 +55,19 @@
 											<input type="hidden" name="new_state" value="true"/>
 										{{/if}}
 										<input type="hidden" name="date" value="{{this.registration.drive.date}}"/>
-										<button>Ändern</button>
+
+										<button
+											{{#if locked_reason}} disabled {{/if}}
+											autocomplete="off"
+										>
+											Ändern
+										</button>
+
+										{{#if locked_reason}}
+											<td class="note toggle-button">
+												<i>{{locked_reason}}</i>
+											</td>
+										{{/if}}
 									</form>
 								</td>
 							</tr>
@@ -68,9 +80,9 @@
 		</div>
 
 		<div class="functionality-section">
-			<h2>Nicht registrierbare Busfahrten</h2>
-			{{#if locked_regs}}
-				<p>Diese sind aktuell nicht veränderbar, aber als Referenz und für Transparenz werden sie trotzdem hier angezeigt. Sollte sich eine Person unregistrieren und die Deadline noch nicht abgelaufen sein, wird die Fahrt wieder oben angezeigt.</p>
+			<h2>Vergangene Busfahrten</h2>
+			{{#if past_regs}}
+				<p>Diese sind nicht mehr veränderbar, aber als Referenz und für Transparenz werden sie trotzdem hier angezeigt.</p>
 				<!-- and no you scripty scripter, a serverside check for that is done ofc -->
 				<table>
 					<thead>
@@ -81,7 +93,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{{#each locked_regs}}
+						{{#each past_regs}}
 							<tr>
 								<td style="min-width: max-content;">
 									{{this.registration.already_registered}}
@@ -93,7 +105,11 @@
 								{{else}}
 									<td class="highlight-negative">Nein</td>
 								{{/if}}
-								<td class="toggle-button note"><i>{{this.locked_reason}}</i></td>
+								{{#if locked_reason}}
+									<td class="toggle-button note">
+										<i>{{this.locked_reason}}</i>
+									</td>
+								{{/if}}
 							</tr>
 						{{/each}}
 					</tbody>

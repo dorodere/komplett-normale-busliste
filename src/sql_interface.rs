@@ -163,9 +163,9 @@ pub fn init_db_if_necessary(
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum AvailabilityFilter {
-    OnlyAccessible,
-    OnlyLocked,
+pub enum DriveFilter {
+    OnlyPast,
+    OnlyFuture,
     ListAll,
 }
 
@@ -175,7 +175,7 @@ pub enum SearchRegistrationsBy {
     Date(chrono::NaiveDate),
 
     /// Searches the registrations by person id.
-    PersonId { id: i64, filter: AvailabilityFilter },
+    PersonId { id: i64, filter: DriveFilter },
 }
 
 /// Creates a vector of [`Registration`]s filtered by the given criteria.
@@ -223,31 +223,13 @@ pub fn search_registrations(
             )
             {}",
             match filter {
-                AvailabilityFilter::OnlyAccessible =>
+                DriveFilter::OnlyFuture =>
                     "WHERE :now < drive.deadline
-                        AND :now < drive.drivedate
-                        AND (
-                            already_registered_count < drive.registration_cap
-                            OR CASE
-                                WHEN registration.registered IS NULL THEN false
-                                ELSE registration.registered
-                            END
-                        )
                     ORDER BY drive.drivedate ASC",
-                AvailabilityFilter::OnlyLocked =>
-                    "WHERE NOT (
-                        :now < drive.deadline
-                        AND :now < drive.drivedate
-                        AND (
-                            already_registered_count < drive.registration_cap
-                            OR CASE
-                                WHEN registration.registered IS NULL THEN false
-                                ELSE registration.registered
-                            END
-                        )
-                    )
+                DriveFilter::OnlyPast =>
+                    "WHERE drive.deadline <= :now
                     ORDER BY drive.drivedate DESC",
-                AvailabilityFilter::ListAll => "ORDER BY drive.drivedate ASC",
+                DriveFilter::ListAll => "ORDER BY drive.drivedate ASC",
             },
         )),
     }?;
@@ -255,14 +237,14 @@ pub fn search_registrations(
         SearchRegistrationsBy::Date(date) => statement.query(named_params! { ":date": date }),
         SearchRegistrationsBy::PersonId {
             id,
-            filter: AvailabilityFilter::OnlyLocked | AvailabilityFilter::OnlyAccessible,
+            filter: DriveFilter::OnlyPast | DriveFilter::OnlyFuture,
         } => {
             let now = Utc::now().naive_utc().date();
             statement.query(named_params! { ":id": id, ":now": now })
         }
         SearchRegistrationsBy::PersonId {
             id,
-            filter: AvailabilityFilter::ListAll,
+            filter: DriveFilter::ListAll,
         } => statement.query(named_params! { ":id": id }),
     }?;
     Ok(rows
@@ -403,6 +385,28 @@ pub fn update_registration(
         ),
         ApplyRegistrationError::UnknownDriveDate
     )
+}
+
+pub fn is_registered(
+    conn: &mut rusqlite::Connection,
+    person_id: i64,
+    drivedate: chrono::NaiveDate,
+) -> Result<Option<bool>, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT registered
+        FROM registration
+        NATURAL JOIN drive
+        WHERE registration.person_id == :id AND drive.drivedate == :date",
+    )?;
+    let mut query = statement.query_map(
+        named_params! {
+            ":id": person_id,
+            ":date": drivedate,
+        },
+        |row| Ok(row.get(0)?),
+    )?;
+
+    query.next().transpose()
 }
 
 pub enum SearchPersonBy {
