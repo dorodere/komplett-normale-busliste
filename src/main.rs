@@ -1,4 +1,7 @@
-#![allow(clippy::no_effect_underscore_binding)]
+#![allow(
+    clippy::no_effect_underscore_binding, // Rocket heavily uses those in macros
+    clippy::needless_pass_by_value,  // The request guards should take them by value anyways
+)]
 
 #[macro_use]
 extern crate rocket;

@@ -306,24 +306,18 @@ pub async fn verify_token(
     };
 
     // second, check if the token expired
-    let expiration = if let Some(timestamp) = person.token_expiration {
-        timestamp
-    } else {
+    let Some(expiration) = person.token_expiration else {
         return verify_failure_flash();
     };
     if timepoint_expired(expiration) {
         return verify_failure_flash();
     }
 
-    let db_token = if let Some(token) = person.token {
-        token
-    } else {
+    let Some(db_token) = person.token else {
         return verify_failure_flash();
     };
-    let client_token_bytes = match Base64UrlUnpadded::decode_vec(&token) {
-        // possibly evil client, but we just friendly say "something happened and idk what"
-        Err(_) => return verify_failure_flash(),
-        Ok(x) => x,
+    let Ok(client_token_bytes) = Base64UrlUnpadded::decode_vec(&token) else {
+        return verify_failure_flash();
     };
 
     // third, verify client token with token hash we got above

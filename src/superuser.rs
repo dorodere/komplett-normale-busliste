@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+
 use {
     super::{
         authflow::Superuser,
@@ -21,7 +23,7 @@ use {
 };
 
 #[get("/superuser")]
-pub async fn panel(flash: Option<FlashMessage<'_>>, _superuser: Superuser) -> Template {
+pub fn panel(flash: Option<FlashMessage<'_>>, _superuser: Superuser) -> Template {
     #[derive(Debug, Serialize)]
     struct Context {
         flash: Option<String>,
@@ -486,18 +488,14 @@ pub async fn register_person(
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     let update = registration.to_registration_update();
-    match conn
-        .run(move |c| sql_interface::update_registration(c, &update))
+    conn.run(move |c| sql_interface::update_registration(c, &update))
         .await
-    {
-        Err(err) => {
-            return Err(server_error(
-                format!("Error while updating registration (issued by superuser): {err}",),
+        .map_err(|err| {
+            server_error(
+                format!("Error while updating registration (issued by superuser): {err}"),
                 "ein Fehler trat während der Aktualisierung der Anmeldung auf",
-            ))
-        }
-        _ => (),
-    };
+            )
+        })?;
 
     let id = registration.id;
     Ok(Redirect::to(uri!(introspect_person(id = id))))
@@ -517,9 +515,7 @@ pub async fn settings(
     })?;
     settings.insert(
         "flash".to_string(),
-        flash
-            .map(|flash| flash.message().to_string())
-            .unwrap_or_else(|| "".to_string()),
+        flash.map_or_else(String::new, |flash| flash.message().to_string()),
     );
     Ok(Template::render("settings", settings))
 }
@@ -553,7 +549,7 @@ pub async fn set_setting(
             let cap = update.value.parse::<u32>().map_err(|_| {
                 Flash::error(Redirect::to(uri!(settings)), "Die Zahl ist nicht valide, oder zu groß.")
             })?;
-            Value::Integer(cap as i64)
+            Value::Integer(i64::from(cap))
         },
         _ => {
             return Err(server_error(

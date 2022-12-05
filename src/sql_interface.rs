@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation)] // Irrelevant in this context
+
 use {
     super::relative_to_absolute,
     chrono::Utc,
@@ -810,7 +812,7 @@ pub fn set_setting(
 
 pub fn stringify_value(value: Value) -> String {
     match value {
-        Value::Null => "".to_string(),
+        Value::Null => String::new(),
         Value::Integer(number) => number.to_string(),
         Value::Real(number) => number.to_string(),
         Value::Text(text) => text,
