@@ -1,3 +1,5 @@
+#![allow(clippy::no_effect_underscore_binding)]
+
 #[macro_use]
 extern crate rocket;
 
@@ -12,7 +14,7 @@ mod tests;
 use {
     authflow::{Superuser, User},
     chrono::Utc,
-    date_helpers::*,
+    date_helpers::{format_date, relative_to_absolute, time_to_chrono_date},
     rocket::{
         fairing::AdHoc,
         form::{Form, Strict},
@@ -87,7 +89,7 @@ async fn dashboard(
             .await
             .map_err(|err| {
                 server_error(
-                    format!("Error while loading registrations: {}", err),
+                    format!("Error while loading registrations: {err}"),
                     "an error occured while loading registrations",
                 )
             })?;
@@ -212,7 +214,7 @@ async fn register(
         }
         Err(err) => {
             return Err(server_error(
-                format!("Error while updating registration: {}", err),
+                format!("Error while updating registration: {err}"),
                 "ein Fehler trat während der Aktualisierung der Anmeldung auf",
             ))
         }
@@ -244,17 +246,12 @@ fn possible_to_register(
 ) -> Result<(), ImpossibleReason> {
     let now = Utc::now().naive_utc();
 
-    if drive
-        .deadline
-        .map(|deadline| deadline < now)
-        .unwrap_or(false)
-    {
+    if drive.deadline.map_or(false, |deadline| deadline < now) {
         Err(ImpossibleReason::DeadlineExpired)
     } else if wants_to_register
         && drive
             .registration_cap
-            .map(|cap| cap <= drive.already_registered_count)
-            .unwrap_or(false)
+            .map_or(false, |cap| cap <= drive.already_registered_count)
     {
         Err(ImpossibleReason::RegistrationCapReached)
     } else {
@@ -268,7 +265,7 @@ fn rocket() -> _ {
         .attach(Template::custom(|engines| {
             engines
                 .handlebars
-                .register_escape_fn(|input| ammonia::clean_text(input));
+                .register_escape_fn(ammonia::clean_text);
 
             handlebars_helper!(equals: |left_hand: String, right_hand: String| left_hand == right_hand);
 

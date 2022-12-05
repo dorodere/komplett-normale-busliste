@@ -294,8 +294,8 @@ pub fn list_persons_counted_registrations(
             {}
         GROUP BY registration.person_id
         ORDER BY person.name",
-        from.map(|_| "AND :from <= drive.drivedate").unwrap_or(""),
-        to.map(|_| "AND drive.drivedate <= :to").unwrap_or(""),
+        from.map_or("", |_| "AND :from <= drive.drivedate"),
+        to.map_or("", |_| "AND drive.drivedate <= :to"),
     );
     let mut statement = conn.prepare(&statement)?;
     let rows = match (from, to) {
@@ -523,8 +523,7 @@ pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rus
                     WHERE registered AND drive_inner.drive_id == drive.drive_id
                 ) AS already_registered_count
             FROM drive
-            WHERE {}",
-            condition,
+            WHERE {condition}",
         ))?;
 
         let rows = statement.query_map(

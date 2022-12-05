@@ -50,7 +50,7 @@ pub async fn drives_panel(
 
     let drives = conn.run(sql_interface::list_drives).await.map_err(|err| {
         server_error(
-            format!("Error while listing drives: {}", err),
+            format!("Error while listing drives: {err}"),
             "an error occured while listing drives",
         )
     })?;
@@ -89,7 +89,7 @@ pub async fn introspect_drive(
         .await
         .map_err(|err| {
             server_error(
-                &format!("Error listing registrations for date {}: {}", date, err),
+                format!("Error listing registrations for date {date}: {err}"),
                 "an error occured while listing registrations",
             )
         })?;
@@ -122,7 +122,7 @@ pub async fn create_new_drive(
         .await
         .map_err(|err| {
             server_error(
-                format!("Error querying default deadline: {}", err),
+                format!("Error querying default deadline: {err}"),
                 "ein Fehler trat auf, während ich nach den Einstellungen geschaut habe",
             )
         })?;
@@ -148,7 +148,7 @@ pub async fn create_new_drive(
         )),
         Err(err) => {
             return Err(server_error(
-                format!("Error inserting new drive: {}\nDate: {:?}", err, drive_date),
+                format!("Error inserting new drive: {err}\nDate: {drive_date:?}"),
                 "an error occured while inserting a new drive",
             ))
         }
@@ -173,10 +173,7 @@ pub async fn delete_drive(
         .map(|_| Redirect::to(uri!(drives_panel)))
         .map_err(|err| {
             server_error(
-                &format!(
-                    "Error while deleting drive: {}\nDrive ID: {}",
-                    err, drive_id
-                ),
+                format!("Error while deleting drive: {err}\nDrive ID: {drive_id}",),
                 "an error occured while deleting drive",
             )
         })
@@ -250,7 +247,7 @@ pub async fn person_panel(
         .await
         .map_err(|err| {
             server_error(
-                &format!("Error while listing persons: {}", err),
+                format!("Error while listing persons: {err}"),
                 "an error occurred while loading persons",
             )
         })?;
@@ -282,7 +279,7 @@ pub async fn registrations_panel(
         .await
         .map_err(|err| {
             server_error(
-                &format!("Error while counting registrations: {}", err),
+                format!("Error while counting registrations: {err}"),
                 "an error occurred while loading persons",
             )
         })?;
@@ -329,7 +326,7 @@ pub async fn create_new_person(
             "This email is already in use by another person. Perhaps it already exists?",
         )),
         Err(err) => Err(server_error(
-            &format!("Error while inserting new person: {}\n{:#?}", err, debug),
+            format!("Error while inserting new person: {err}\n{debug:#?}"),
             "an error occured while inserting the new person",
         )),
         _ => Ok(Redirect::to(uri!(person_panel))),
@@ -376,7 +373,7 @@ pub async fn update_person(
         .map(|_| Redirect::to(uri!(person_panel)))
         .map_err(|err| {
             server_error(
-                &format!("Error while updating person: {}\n{:#?}", err, debug),
+                format!("Error while updating person: {err}\n{debug:#?}"),
                 "an error occured while updating person",
             )
         })
@@ -399,10 +396,7 @@ pub async fn delete_person(
         .map(|_| Redirect::to(uri!(person_panel)))
         .map_err(|err| {
             server_error(
-                &format!(
-                    "Error while deleting person: {}\nPerson ID: {}",
-                    err, person_id
-                ),
+                format!("Error while deleting person: {err}\nPerson ID: {person_id}",),
                 "an error occured while deleting person",
             )
         })
@@ -433,10 +427,7 @@ pub async fn introspect_person(
         .await
         .map_err(|err| {
             server_error(
-                format!(
-                    "Error occurred while introspecting {} (registration search): {}",
-                    id, err
-                ),
+                format!("Error occurred while introspecting {id} (registration search): {err}"),
                 "an error occurred while introspecting that person",
             )
         })?;
@@ -446,10 +437,7 @@ pub async fn introspect_person(
         .await
         .map_err(|err| {
             server_error(
-                format!(
-                    "Error occurred while introspecting {} (name search): {}",
-                    id, err
-                ),
+                format!("Error occurred while introspecting {id} (name search): {err}"),
                 "an error occurred while introspecting that person",
             )
         })?;
@@ -504,10 +492,7 @@ pub async fn register_person(
     {
         Err(err) => {
             return Err(server_error(
-                &format!(
-                    "Error while updating registration (issued by superuser): {}",
-                    err
-                ),
+                format!("Error while updating registration (issued by superuser): {err}",),
                 "ein Fehler trat während der Aktualisierung der Anmeldung auf",
             ))
         }
@@ -526,7 +511,7 @@ pub async fn settings(
 ) -> Result<Template, Flash<Redirect>> {
     let mut settings = conn.run(sql_interface::all_settings).await.map_err(|err| {
         server_error(
-            format!("Error while fetching current setting values: {}", err),
+            format!("Error while fetching current setting values: {err}"),
             "ein Fehler trat während des Abfragen der Werte der aktuellen Einstellungen auf",
         )
     })?;
@@ -587,8 +572,8 @@ pub async fn set_setting(
         .map_err(|err| {
             server_error(
                 format!(
-                    "Error while setting '{}' to '{}': {}",
-                    update.name, update.value, err
+                    "Error while setting '{}' to '{}': {err}",
+                    update.name, update.value
                 ),
                 "ein Fehler trat während des Updates der Einstellung auf",
             )

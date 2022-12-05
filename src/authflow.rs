@@ -45,7 +45,7 @@ pub async fn index(
         .await
         .map_err(|err| {
             server_error(
-                format!("Non-user error while displaying login page: {}", err),
+                format!("Non-user error while displaying login page: {err}"),
                 "ein Fehler trat auf, während ich nach den Einstellungen geschaut habe",
             )
         })?;
@@ -101,7 +101,7 @@ hier ist dein Link für die Anmeldung in Komplett normale Busliste. Er wird
 in einer Stunde automatisch ungültig, aber sobald du einmal angemeldet bist,
 bist du das 30 Tage lang.
 
-Hier ist dein Link: {}
+Hier ist dein Link: {url}
 
 Mit freundlichen Grüßen,
 Komplett normale Busliste
@@ -112,7 +112,6 @@ Komplett normale Busliste
  versuche erneut, eine Email anzufordern.)
 
 (P.P.S. Zudem kann ein Link nur einmal verwendet werden. Tut mir leid.)"#,
-            url,
         ))?;
 
     let creds = Credentials::new(from.to_string(), password.to_string());
@@ -155,7 +154,7 @@ pub async fn login(
         }
         Err(err) => {
             return Err(server_error(
-                &format!("Non-user error while searching for email: {}", err),
+                format!("Non-user error while searching for email: {err}"),
                 "ein Fehler trat auf, während ich nach deiner Emailadresse gesucht habe",
             ))
         }
@@ -187,21 +186,21 @@ pub async fn login(
             Err(SendMailError::LettreError(err)) => {
                 let (logmsg, flashmsg) = if err.is_permanent() {
                     (
-                        format!("Permanent SMTP error while sending email: {}", err),
+                        format!("Permanent SMTP error while sending email: {err}"),
                         "ein permanenter Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
                     )
                 } else if err.is_transient() {
                     (
-                        format!("Transient SMTP error while sending email: {}", err),
+                        format!("Transient SMTP error while sending email: {err}"),
                         "ein temporärer Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
                     )
                 } else {
                     (
-                        format!("Error occured while trying to send email: {}", err),
+                        format!("Error occured while trying to send email: {err}"),
                         "ein Fehler trat auf, während ich versuchte, die Anmeldemail zu verschicken",
                     )
                 };
-                return Err(server_error(&logmsg, flashmsg));
+                return Err(server_error(logmsg, flashmsg));
             }
             Err(SendMailError::BuildError(err)) => panic!("{}", err),
             _ => (),
@@ -220,7 +219,7 @@ pub async fn login(
         .await
     {
         return Err(server_error(
-            &format!("Database error while updating token: {}", err),
+            format!("Database error while updating token: {err}"),
             "ein Fehler trat auf, während ich versuchte, den Anmeldeversuch abzuspeichern",
         ));
     };
@@ -484,8 +483,8 @@ impl<'r> FromRequest<'r> for Superuser {
                     "Server side error while validating login token, please notify the administrator of this instance!",
                 ))
             }
-            Err(e) => {
-                println!("{}", e);
+            Err(err) => {
+                println!("{err}");
                 Outcome::Forward(())
             }
         }
