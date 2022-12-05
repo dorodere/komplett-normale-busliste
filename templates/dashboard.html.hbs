@@ -38,23 +38,23 @@
 						{{#each future_regs}}
 							<tr>
 								<td style="min-width: max-content;">
-									{{this.registration.drive.already_registered_count}}
-									/ {{this.registration.drive.registration_cap}}
+									{{registration.drive.already_registered_count}}
+									/ {{registration.drive.registration_cap}}
 								</td>
-								<td>{{this.pretty_date}}</td>
-								{{#if this.registration.registered}}
+								<td>{{pretty_date}}</td>
+								{{#if registration.registered}}
 									<td class="highlight-positive">Ja</td>
 								{{else}}
 									<td class="highlight-negative">Nein</td>
 								{{/if}}
 								<td class="toggle-button">
 									<form action="/register" method="post">
-										{{#if this.registration.registered}}
+										{{#if registration.registered}}
 											<input type="hidden" name="new_state" value="false"/>
 										{{else}}
 											<input type="hidden" name="new_state" value="true"/>
 										{{/if}}
-										<input type="hidden" name="date" value="{{this.registration.drive.date}}"/>
+										<input type="hidden" name="date" value="{{registration.drive.date}}"/>
 
 										<button
 											{{#if locked_reason}} disabled {{/if}}
@@ -96,18 +96,18 @@
 						{{#each past_regs}}
 							<tr>
 								<td style="min-width: max-content;">
-									{{this.registration.drive.already_registered_count}}
-									/ {{this.registration.drive.registration_cap}}
+									{{registration.drive.already_registered_count}}
+									/ {{registration.drive.registration_cap}}
 								</td>
-								<td>{{this.pretty_date}}</td>
-								{{#if this.registration.registered}}
+								<td>{{pretty_date}}</td>
+								{{#if registration.registered}}
 									<td class="highlight-positive">Ja</td>
 								{{else}}
 									<td class="highlight-negative">Nein</td>
 								{{/if}}
 								{{#if locked_reason}}
 									<td class="toggle-button note">
-										<i>{{this.locked_reason}}</i>
+										<i>{{locked_reason}}</i>
 									</td>
 								{{/if}}
 							</tr>

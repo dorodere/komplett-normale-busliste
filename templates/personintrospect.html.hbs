@@ -21,21 +21,21 @@
 				<tbody>
 					{{#each registrations}}
 						<tr>
-							<td>{{this.pretty_date}}</td>
-							{{#if this.registration.registered}}
+							<td>{{pretty_date}}</td>
+							{{#if registration.registered}}
 								<td class="highlight-positive">Ja</td>
 							{{else}}
 								<td class="highlight-negative">Nein</td>
 							{{/if}}
 							<td class="toggle-button">
 								<form action="/person/register" method="post">
-									{{#if this.registration.registered}}
+									{{#if registration.registered}}
 										<input type="hidden" name="new_state" value="false"/>
 									{{else}}
 										<input type="hidden" name="new_state" value="true"/>
 									{{/if}}
-									<input type="hidden" name="date" value="{{this.registration.drive.date}}"/>
-									<input type="hidden" name="id" value="{{this.registration.person.id}}"/>
+									<input type="hidden" name="date" value="{{registration.drive.date}}"/>
+									<input type="hidden" name="id" value="{{registration.person.id}}"/>
 									<button>Ändern</button>
 								</form>
 							</td>

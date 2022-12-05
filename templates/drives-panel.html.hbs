@@ -31,8 +31,8 @@
 			<h2>Future drives</h2>
 				{{#if future_drives}}
 					{{#each future_drives}}
-						<form action="/drive/update" method="post" id="future-form-{{this.id}}" autocomplete="off">
-							<input type="hidden" name="id" value="{{this.id}}"/>
+						<form action="/drive/update" method="post" id="future-form-{{id}}" autocomplete="off">
+							<input type="hidden" name="id" value="{{id}}"/>
 						</form>
 					{{/each}}
 
@@ -50,28 +50,28 @@
 								<tr>
 									<td class="toggle-button">
 										<form action="/drive/delete" method="post"/>
-											<input type="hidden" name="id" value="{{this.id}}"/>
+											<input type="hidden" name="id" value="{{id}}"/>
 											<button class="dangerous">Delete</button>
 										</form>
 									</td>
 
 									<td>
-										<input form="future-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
+										<input form="future-form-{{id}}" type="date" name="date" value="{{date}}"/>
 									</td>
 									<td>
-										<input form="future-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+										<input form="future-form-{{id}}" type="datetime-local" name="deadline" value="{{deadline}}"/>
 									</td>
 									<td style="display: flex;">
 										<p style="width: max-content;">{{already_registered_count}} /</p>
-										<input form="future-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
+										<input form="future-form-{{id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
 									</td>
 
 									<td class="toggle-button">
-										<button form="future-form-{{this.id}}">Apply changes</button>
+										<button form="future-form-{{id}}">Apply changes</button>
 									</td>
 									<td class="toggle-button">
 										<form action="/drive/list" method="get"/>
-											<input type="hidden" name="date" value="{{this.date}}"/>
+											<input type="hidden" name="date" value="{{date}}"/>
 											<button>Registrations</button>
 										</form>
 									</td>
@@ -85,11 +85,11 @@
 		</div>
 
 		<div class="functionality-section">
-			<h2>All drives</h2>
+			<h2>Past drives</h2>
 			{{#if past_drives}}
 				{{#each past_drives}}
-					<form action="/drive/update" method="post" id="past-form-{{this.id}}" autocomplete="off">
-						<input type="hidden" name="id" value="{{this.id}}"/>
+					<form action="/drive/update" method="post" id="past-form-{{id}}" autocomplete="off">
+						<input type="hidden" name="id" value="{{id}}"/>
 					</form>
 				{{/each}}
 
@@ -107,28 +107,28 @@
 								<tr>
 									<td class="toggle-button">
 										<form action="/drive/delete" method="post"/>
-											<input type="hidden" name="id" value="{{this.id}}"/>
+											<input type="hidden" name="id" value="{{id}}"/>
 											<button class="dangerous">Delete</button>
 										</form>
 									</td>
 
 									<td>
-										<input form="past-form-{{this.id}}" type="date" name="date" value="{{this.date}}"/>
+										<input form="past-form-{{id}}" type="date" name="date" value="{{date}}"/>
 									</td>
 									<td>
-										<input form="past-form-{{this.id}}" type="datetime-local" name="deadline" value="{{this.deadline}}"/>
+										<input form="past-form-{{id}}" type="datetime-local" name="deadline" value="{{deadline}}"/>
 									</td>
 									<td style="display: flex;">
 										<p style="width: max-content;">{{already_registered_count}} /</p>
-										<input form="past-form-{{this.id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
+										<input form="past-form-{{id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
 									</td>
 
 									<td class="toggle-button">
-										<button form="past-form-{{this.id}}">Apply changes</button>
+										<button form="past-form-{{id}}">Apply changes</button>
 									</td>
 									<td class="toggle-button">
 										<form action="/drive/list" method="get"/>
-											<input type="hidden" name="date" value="{{this.date}}"/>
+											<input type="hidden" name="date" value="{{date}}"/>
 											<button>Registrations</button>
 										</form>
 									</td>
