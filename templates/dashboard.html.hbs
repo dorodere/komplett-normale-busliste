@@ -29,7 +29,7 @@
 				<table>
 					<thead>
 						<tr>
-							<th class="toggle-button"></th>
+							<th class="frameless"></th>
 							<th>Datum</th>
 							<th>Bist du angemeldet?</th>
 						</tr>
@@ -47,7 +47,7 @@
 								{{else}}
 									<td class="highlight-negative">Nein</td>
 								{{/if}}
-								<td class="toggle-button">
+								<td class="frameless">
 									<form action="/register" method="post">
 										{{#if registration.registered}}
 											<input type="hidden" name="new_state" value="false"/>
@@ -64,7 +64,7 @@
 										</button>
 
 										{{#if locked_reason}}
-											<td class="note toggle-button">
+											<td class="note frameless">
 												<i>{{locked_reason}}</i>
 											</td>
 										{{/if}}
@@ -87,7 +87,7 @@
 				<table>
 					<thead>
 						<tr>
-							<th class="toggle-button"></th>
+							<th class="frameless"></th>
 							<th>Datum</th>
 							<th>Warst du angemeldet?</th>
 						</tr>
@@ -106,7 +106,7 @@
 									<td class="highlight-negative">Nein</td>
 								{{/if}}
 								{{#if locked_reason}}
-									<td class="toggle-button note">
+									<td class="frameless note">
 										<i>{{locked_reason}}</i>
 									</td>
 								{{/if}}

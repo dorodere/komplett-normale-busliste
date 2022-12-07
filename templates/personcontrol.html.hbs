@@ -42,7 +42,7 @@
 
 			<table>
 				<thead>
-					<th class="toggle-button"></th>
+					<th class="frameless"></th>
 					<th>Visible in list?</th>
 					<th>First name</th>
 					<th>Last name</th>
@@ -51,7 +51,7 @@
 				<tbody>
 					{{#each persons}}
 						<tr>
-							<td class="toggle-button">
+							<td class="frameless">
 								<form action="/person/delete" method="post">
 									<input name="id" type="hidden" value="{{id}}"/>
 									<button class="dangerous">Delete</button>
@@ -70,8 +70,8 @@
 							<td><input form="form-{{id}}" type="text" name="prename" value="{{prename}}"/></td>
 							<td><input form="form-{{id}}" type="text" name="name" value="{{name}}"/></td>
 							<td><input form="form-{{id}}" type="email" name="email" value="{{email}}"/></td>
-							<td class="toggle-button"><button form="form-{{id}}">Apply changes</button></td>
-							<td class="toggle-button">
+							<td class="frameless"><button form="form-{{id}}">Apply changes</button></td>
+							<td class="frameless">
 								<form action="/person/list" method="get">
 									<input name="id" type="hidden" value="{{id}}"/>
 									<button>Registrations</button>

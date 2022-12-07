@@ -39,7 +39,7 @@
 					<table>
 						<thead>
 							<tr>
-								<th class="toggle-button"></th>
+								<th class="frameless"></th>
 								<th>Date</th>
 								<th>Registration deadline (in UTC)</th>
 								<th>Registration cap</th>
@@ -48,7 +48,7 @@
 						<tbody>
 							{{#each future_drives}}
 								<tr>
-									<td class="toggle-button">
+									<td class="frameless">
 										<form action="/drive/delete" method="post"/>
 											<input type="hidden" name="id" value="{{id}}"/>
 											<button class="dangerous">Delete</button>
@@ -66,10 +66,10 @@
 										<input form="future-form-{{id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
 									</td>
 
-									<td class="toggle-button">
+									<td class="frameless">
 										<button form="future-form-{{id}}">Apply changes</button>
 									</td>
-									<td class="toggle-button">
+									<td class="frameless">
 										<form action="/drive/list" method="get"/>
 											<input type="hidden" name="date" value="{{date}}"/>
 											<button>Registrations</button>
@@ -96,7 +96,7 @@
 				<table>
 					<thead>
 						<tr>
-							<th class="toggle-button"></th>
+							<th class="frameless"></th>
 							<th>Date</th>
 							<th>Registration deadline (in UTC)</th>
 							<th>Registration cap</th>
@@ -105,7 +105,7 @@
 					<tbody>
 							{{#each past_drives}}
 								<tr>
-									<td class="toggle-button">
+									<td class="frameless">
 										<form action="/drive/delete" method="post"/>
 											<input type="hidden" name="id" value="{{id}}"/>
 											<button class="dangerous">Delete</button>
@@ -123,10 +123,10 @@
 										<input form="past-form-{{id}}" type="number" min="0" name="registration_cap" value="{{registration_cap}}"/>
 									</td>
 
-									<td class="toggle-button">
+									<td class="frameless">
 										<button form="past-form-{{id}}">Apply changes</button>
 									</td>
-									<td class="toggle-button">
+									<td class="frameless">
 										<form action="/drive/list" method="get"/>
 											<input type="hidden" name="date" value="{{date}}"/>
 											<button>Registrations</button>
