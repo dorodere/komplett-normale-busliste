@@ -1,7 +1,7 @@
 #![allow(clippy::cast_possible_truncation)] // Irrelevant in this context
 
 use {
-    super::relative_to_absolute,
+    crate::date_helpers::relative_to_absolute,
     chrono::Utc,
     lettre::Address,
     rocket_sync_db_pools::rusqlite,

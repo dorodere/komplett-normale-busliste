@@ -1,39 +1,39 @@
-use {
-    super::{
-        config::Config,
-        relative_to_absolute, server_error,
-        sql_interface::{self, SearchPersonBy, SearchPersonError},
-        BususagesDBConn,
-    },
-    argon2::{
-        password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
-        Algorithm, Argon2, Params, Version,
-    },
-    base64ct::{Base64UrlUnpadded, Encoding},
-    chrono::Utc,
-    cookie::SameSite,
-    jwt::{SignWithKey, VerifyWithKey},
-    lettre::{message::Mailbox, transport::smtp::authentication::Credentials, AsyncTransport},
-    rand::Rng,
-    rocket::{
-        config::Config as RocketConfig,
-        form::{Form, Strict},
-        http::{Cookie, CookieJar, Status},
-        request::{FlashMessage, FromRequest, Outcome, Request},
-        response::{Flash, Redirect},
-        State,
-    },
-    rocket_dyn_templates::{context, Template},
-    serde::{Deserialize, Serialize},
-    std::{fmt, time::Duration},
-    thiserror::Error,
+use crate::{
+    config::Config,
+    date_helpers::relative_to_absolute,
+    server_error,
+    sql_interface::{self, SearchPersonBy, SearchPersonError},
+    BususagesDBConn,
 };
+use argon2::{
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Algorithm, Argon2, Params, Version,
+};
+use base64ct::{Base64UrlUnpadded, Encoding};
+use chrono::Utc;
+use cookie::SameSite;
+use jwt::{SignWithKey, VerifyWithKey};
+use lettre::{message::Mailbox, transport::smtp::authentication::Credentials, AsyncTransport};
+use rand::Rng;
+use rocket::{
+    config::Config as RocketConfig,
+    form::{Form, Strict},
+    http::{Cookie, CookieJar, Status},
+    request::{FlashMessage, FromRequest, Outcome, Request},
+    response::{Flash, Redirect},
+    State,
+};
+use rocket_dyn_templates::{context, Template};
+use serde::{Deserialize, Serialize};
+use std::{fmt, time::Duration};
+use thiserror::Error;
 
 #[derive(FromForm)]
 pub struct LoginForm {
     email: String,
 }
 
+// displayed only if the dashboard should fail, so the rank = 2
 #[get("/", rank = 2)]
 pub async fn index(
     conn: BususagesDBConn,
@@ -353,7 +353,7 @@ pub async fn verify_token(
     let redirect = if person.is_superuser {
         Redirect::to(uri!(super::superuser::panel))
     } else {
-        Redirect::to(uri!(super::dashboard))
+        Redirect::to(uri!(super::dashboard::dashboard))
     };
     Flash::success(
         redirect,
@@ -407,6 +407,7 @@ impl User {
     }
 
     #[inline]
+    #[must_use]
     pub fn person_id(&self) -> i64 {
         self.person_id
     }

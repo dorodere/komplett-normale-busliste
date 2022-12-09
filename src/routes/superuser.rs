@@ -1,10 +1,12 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use {
-    super::{
-        authflow::Superuser,
-        date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
-        format_date, server_error,
+    crate::{
+        date_helpers::{
+            figure_out_exact_deadline, format_date, time_to_chrono_date, time_to_chrono_datetime,
+        },
+        routes::authflow::Superuser,
+        server_error,
         sql_interface::{
             self, DriveFilter, InsertDriveError, Person, Registration, SearchPersonBy,
             SearchRegistrationsBy, UpdateDriveError, VisibilityFilter,
@@ -80,7 +82,7 @@ pub async fn introspect_drive(
         now: String,
     }
 
-    let pretty_date = super::format_date(time_to_chrono_date(date));
+    let pretty_date = format_date(time_to_chrono_date(date));
     let registrations = conn
         .run(move |c| {
             sql_interface::search_registrations(

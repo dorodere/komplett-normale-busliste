@@ -8,6 +8,7 @@ use {
 ///
 /// Uses an [`i64`] instead of an [`u64`] due to SQL having no proper unsigned integer type.
 /// Converting wouldn't have any advantage then.
+#[must_use]
 pub fn relative_to_absolute(duration: Duration) -> i64 {
     let now = Utc::now();
     let duration =
@@ -17,6 +18,7 @@ pub fn relative_to_absolute(duration: Duration) -> i64 {
 
 /// Converts a [`time::Date`] to a [`chrono::NaiveDate`], as they don't provide any direct
 /// interconversion methods.
+#[must_use]
 pub fn time_to_chrono_date(time_date: time::Date) -> chrono::NaiveDate {
     let iso_date = time_date.to_iso_week_date();
     let chrono_weekday = match time_date.weekday() {
@@ -32,6 +34,7 @@ pub fn time_to_chrono_date(time_date: time::Date) -> chrono::NaiveDate {
     chrono::NaiveDate::from_isoywd_opt(iso_date.0, u32::from(iso_date.1), chrono_weekday).unwrap()
 }
 
+#[must_use]
 pub fn time_to_chrono_datetime(time_datetime: time::PrimitiveDateTime) -> chrono::NaiveDateTime {
     time_to_chrono_date(time_datetime.date())
         .and_hms_opt(
@@ -42,10 +45,12 @@ pub fn time_to_chrono_datetime(time_datetime: time::PrimitiveDateTime) -> chrono
         .unwrap()
 }
 
+#[must_use]
 pub fn format_date(date: chrono::NaiveDate) -> String {
     date.format("%A, %d.%m.%Y").to_string()
 }
 
+#[must_use]
 pub fn figure_out_exact_deadline(
     deadline_weekday: u32,
     drive_date: chrono::NaiveDate,
