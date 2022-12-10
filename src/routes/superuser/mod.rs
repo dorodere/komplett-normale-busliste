@@ -1,6 +1,7 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 mod drive;
+mod registration;
 
 use rocket::{
     form::{Form, Lenient, Strict},
@@ -16,9 +17,7 @@ use crate::{
     date_helpers::{format_date, time_to_chrono_date},
     routes::authflow::Superuser,
     server_error,
-    sql_interface::{
-        self, DriveFilter, Person, SearchPersonBy, SearchRegistrationsBy, VisibilityFilter,
-    },
+    sql_interface::{self, DriveFilter, SearchPersonBy, SearchRegistrationsBy, VisibilityFilter},
     BususagesDBConn,
 };
 
@@ -26,9 +25,9 @@ use crate::{
 pub fn routes() -> Vec<Route> {
     crate::flatten_routes([
         drive::routes(),
+        registration::routes(),
         routes![
             panel,
-            registrations_panel,
             person_panel,
             create_new_person,
             update_person,
@@ -43,14 +42,9 @@ pub fn routes() -> Vec<Route> {
 
 #[get("/superuser")]
 pub fn panel(flash: Option<FlashMessage<'_>>, _superuser: Superuser) -> Template {
-    #[derive(Debug, Serialize)]
-    struct Context {
-        flash: Option<String>,
-    }
-
     Template::render(
         "superuser-panel",
-        &Context {
+        context! {
             flash: flash.map(|flash| flash.message().to_string()),
         },
     )
@@ -68,12 +62,6 @@ pub async fn person_panel(
     _superuser: Superuser,
     flash: Option<FlashMessage<'_>>,
 ) -> Result<Template, Flash<Redirect>> {
-    #[derive(Debug, Serialize)]
-    struct Context {
-        flash: Option<String>,
-        persons: Vec<Person>,
-    }
-
     let persons = conn
         .run(|c| sql_interface::list_all_persons(c, VisibilityFilter::IncludingInvisible))
         .await
@@ -86,37 +74,11 @@ pub async fn person_panel(
 
     Ok(Template::render(
         "personcontrol",
-        &Context {
+        context! {
             flash: flash.map(|flash| flash.message().to_string()),
             persons,
         },
     ))
-}
-
-#[get("/registrations?<from>&<to>")]
-pub async fn registrations_panel(
-    conn: BususagesDBConn,
-    _superuser: Superuser,
-    from: Option<time::Date>,
-    to: Option<time::Date>,
-) -> Result<Template, Flash<Redirect>> {
-    let persons_with_counts = conn
-        .run(move |c| {
-            sql_interface::list_persons_counted_registrations(
-                c,
-                from.map(time_to_chrono_date),
-                to.map(time_to_chrono_date),
-            )
-        })
-        .await
-        .map_err(|err| {
-            server_error(
-                format!("Error while counting registrations: {err}"),
-                "an error occurred while loading persons",
-            )
-        })?;
-
-    Ok(Template::render("registrations-panel", persons_with_counts))
 }
 
 #[derive(Debug, FromForm)]
