@@ -32,7 +32,7 @@ use crate::{
 
 #[must_use]
 pub fn routes() -> Vec<Route> {
-    routes![index, login, verify_token]
+    routes![index, login, logout, verify_token]
 }
 
 #[derive(FromForm)]
@@ -366,6 +366,12 @@ pub async fn verify_token(
         redirect,
         "Erfolgreich angemeldet. Diese Anmeldung gilt 30 Tage ab jetzt, solange du nicht deine Cookies löschst."
     )
+}
+
+#[post("/logout")]
+fn logout(_user: User, jar: &CookieJar<'_>) -> Redirect {
+    jar.remove(Cookie::named("auth-token"));
+    Redirect::to(uri!(index))
 }
 
 #[derive(Debug, Error)]

@@ -3,7 +3,6 @@ use std::fmt;
 use chrono::Utc;
 use rocket::{
     form::{Form, Strict},
-    http::{Cookie, CookieJar},
     request::FlashMessage,
     response::{Flash, Redirect},
     Route,
@@ -19,11 +18,9 @@ use crate::{
     BususagesDBConn,
 };
 
-use super::authflow;
-
 #[must_use]
 pub fn routes() -> Vec<Route> {
-    routes![dashboard, register, logout]
+    routes![dashboard, register]
 }
 
 #[get("/")]
@@ -91,13 +88,6 @@ async fn dashboard(
             show_superuser_controls: superuser.is_some(),
         },
     ))
-}
-
-// TODO: V should go into authflow
-#[post("/logout")]
-fn logout(_user: User, jar: &CookieJar<'_>) -> Redirect {
-    jar.remove(Cookie::named("auth-token"));
-    Redirect::to(uri!(authflow::index))
 }
 
 /// A registration form to be returned by the frontend.
