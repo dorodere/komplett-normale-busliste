@@ -21,17 +21,11 @@ use crate::{
 
 #[must_use]
 pub fn routes() -> Vec<Route> {
-    routes![
-        drives_panel,
-        introspect_drive,
-        create_new_drive,
-        delete_drive,
-        update_deadline
-    ]
+    routes![panel, introspect, create, delete, update]
 }
 
 #[get("/drives")]
-pub async fn drives_panel(
+pub async fn panel(
     conn: BususagesDBConn,
     flash: Option<FlashMessage<'_>>,
     _superuser: Superuser,
@@ -61,7 +55,7 @@ pub async fn drives_panel(
 }
 
 #[get("/drive/list?<date>")]
-pub async fn introspect_drive(
+pub async fn introspect(
     conn: BususagesDBConn,
     date: time::Date,
     _superuser: Superuser,
@@ -93,14 +87,14 @@ pub async fn introspect_drive(
 }
 
 #[derive(Debug, FromForm)]
-pub struct NewDrive {
+pub struct Create {
     pub(crate) date: time::Date,
 }
 
 #[post("/drive/new", data = "<form>")]
-pub async fn create_new_drive(
+pub async fn create(
     conn: BususagesDBConn,
-    form: Form<Strict<NewDrive>>,
+    form: Form<Strict<Create>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     let drive_date = time_to_chrono_date(form.date);
@@ -131,7 +125,7 @@ pub async fn create_new_drive(
         .await
     {
         Err(InsertDriveError::AlreadyExists) => Err(Flash::error(
-            Redirect::to(uri!(drives_panel)),
+            Redirect::to(uri!(panel)),
             "Bus drive already exists!",
         )),
         Err(err) => {
@@ -140,25 +134,25 @@ pub async fn create_new_drive(
                 "an error occured while inserting a new drive",
             ))
         }
-        _ => Ok(Redirect::to(uri!(drives_panel))),
+        _ => Ok(Redirect::to(uri!(panel))),
     }
 }
 
 #[derive(Debug, FromForm)]
-pub struct DeleteDrive {
+pub struct Delete {
     pub(crate) id: i64,
 }
 
 #[post("/drive/delete", data = "<form>")]
-pub async fn delete_drive(
+pub async fn delete(
     conn: BususagesDBConn,
-    form: Form<Strict<DeleteDrive>>,
+    form: Form<Strict<Delete>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     let drive_id = form.id;
     conn.run(move |c| sql_interface::delete_drive(c, drive_id))
         .await
-        .map(|_| Redirect::to(uri!(drives_panel)))
+        .map(|_| Redirect::to(uri!(panel)))
         .map_err(|err| {
             server_error(
                 format!("Error while deleting drive: {err}\nDrive ID: {drive_id}",),
@@ -168,7 +162,7 @@ pub async fn delete_drive(
 }
 
 #[derive(FromForm, Debug)]
-pub struct UpdateDrive {
+pub struct Update {
     pub(crate) id: i64,
     pub(crate) date: time::Date,
     pub(crate) deadline: time::PrimitiveDateTime,
@@ -176,13 +170,13 @@ pub struct UpdateDrive {
 }
 
 #[post("/drive/update", data = "<update>")]
-pub async fn update_deadline(
+pub async fn update(
     conn: BususagesDBConn,
-    update: Option<Form<Strict<UpdateDrive>>>,
+    update: Option<Form<Strict<Update>>>,
     _superuser: Superuser,
 ) -> Result<Flash<Redirect>, Flash<Redirect>> {
     let Some(update) = update else {
-        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Please fill all fields."));
+        return Err(Flash::error(Redirect::to(uri!(panel)), "Please fill all fields."));
     };
 
     let update = sql_interface::Drive {
@@ -198,7 +192,7 @@ pub async fn update_deadline(
         .await
         .map_err(|err| match err {
             UpdateDriveError::DateAlreadyExists => Flash::error(
-                Redirect::to(uri!(drives_panel)),
+                Redirect::to(uri!(panel)),
                 "Es existiert bereits ein Drive mit diesem Datum, nichts geändert.",
             ),
             UpdateDriveError::RusqliteError(err) => server_error(
@@ -209,5 +203,5 @@ pub async fn update_deadline(
                 "ein Fehler trat während der Aktualisierung der Deadline auf",
             ),
         })
-        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Änderungen angewandt."))
+        .map(|_| Flash::success(Redirect::to(uri!(panel)), "Änderungen angewandt."))
 }

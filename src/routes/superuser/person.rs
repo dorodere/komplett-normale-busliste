@@ -17,24 +17,17 @@ use crate::{
 
 #[must_use]
 pub fn routes() -> Vec<Route> {
-    routes![
-        person_panel,
-        create_new_person,
-        update_person,
-        delete_person,
-        introspect_person,
-        register_person,
-    ]
+    routes![panel, create, update, delete, introspect, register]
 }
 
 /// Just a shorthand for an error flash containing a redirect.
 #[inline]
 fn flash_error(message: &str) -> Flash<Redirect> {
-    Flash::error(Redirect::to(uri!(person_panel)), message)
+    Flash::error(Redirect::to(uri!(panel)), message)
 }
 
 #[get("/person")]
-pub async fn person_panel(
+pub async fn panel(
     conn: BususagesDBConn,
     _superuser: Superuser,
     flash: Option<FlashMessage<'_>>,
@@ -59,16 +52,16 @@ pub async fn person_panel(
 }
 
 #[derive(Debug, FromForm)]
-pub struct NewPerson {
+pub struct Create {
     prename: String,
     name: String,
     email: String,
 }
 
-impl TryFrom<NewPerson> for sql_interface::NewPerson {
+impl TryFrom<Create> for sql_interface::NewPerson {
     type Error = lettre::address::AddressError;
 
-    fn try_from(source: NewPerson) -> Result<sql_interface::NewPerson, Self::Error> {
+    fn try_from(source: Create) -> Result<sql_interface::NewPerson, Self::Error> {
         Ok(sql_interface::NewPerson {
             prename: source.prename,
             name: source.name,
@@ -78,9 +71,9 @@ impl TryFrom<NewPerson> for sql_interface::NewPerson {
 }
 
 #[post("/person/new", data = "<form>")]
-pub async fn create_new_person(
+pub async fn create(
     conn: BususagesDBConn,
-    form: Form<Strict<NewPerson>>,
+    form: Form<Strict<Create>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     let new_person: sql_interface::NewPerson = form
@@ -100,12 +93,12 @@ pub async fn create_new_person(
             format!("Error while inserting new person: {err}\n{debug:#?}"),
             "an error occured while inserting the new person",
         )),
-        _ => Ok(Redirect::to(uri!(person_panel))),
+        _ => Ok(Redirect::to(uri!(panel))),
     }
 }
 
 #[derive(Debug, FromForm)]
-pub struct UpdatePerson {
+pub struct Update {
     id: i64,
     prename: String,
     name: String,
@@ -113,10 +106,10 @@ pub struct UpdatePerson {
     is_visible: Lenient<bool>,
 }
 
-impl TryFrom<UpdatePerson> for sql_interface::UpdatePerson {
+impl TryFrom<Update> for sql_interface::UpdatePerson {
     type Error = lettre::address::AddressError;
 
-    fn try_from(source: UpdatePerson) -> Result<sql_interface::UpdatePerson, Self::Error> {
+    fn try_from(source: Update) -> Result<sql_interface::UpdatePerson, Self::Error> {
         Ok(sql_interface::UpdatePerson {
             id: source.id,
             prename: source.prename,
@@ -128,9 +121,9 @@ impl TryFrom<UpdatePerson> for sql_interface::UpdatePerson {
 }
 
 #[post("/person/update", data = "<form>")]
-pub async fn update_person(
+pub async fn update(
     conn: BususagesDBConn,
-    form: Form<Strict<UpdatePerson>>,
+    form: Form<Strict<Update>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     let update_person: sql_interface::UpdatePerson = form
@@ -141,7 +134,7 @@ pub async fn update_person(
     let debug = update_person.clone();
     conn.run(move |c| sql_interface::update_person(c, &update_person))
         .await
-        .map(|_| Redirect::to(uri!(person_panel)))
+        .map(|_| Redirect::to(uri!(panel)))
         .map_err(|err| {
             server_error(
                 format!("Error while updating person: {err}\n{debug:#?}"),
@@ -151,20 +144,20 @@ pub async fn update_person(
 }
 
 #[derive(FromForm)]
-pub struct DeletePerson {
+pub struct Delete {
     id: i64,
 }
 
 #[post("/person/delete", data = "<form>")]
-pub async fn delete_person(
+pub async fn delete(
     conn: BususagesDBConn,
-    form: Form<Strict<DeletePerson>>,
+    form: Form<Strict<Delete>>,
     _superuser: Superuser,
 ) -> Result<Redirect, Flash<Redirect>> {
     let person_id = form.id;
     conn.run(move |c| sql_interface::delete_person(c, person_id))
         .await
-        .map(|_| Redirect::to(uri!(person_panel)))
+        .map(|_| Redirect::to(uri!(panel)))
         .map_err(|err| {
             server_error(
                 format!("Error while deleting person: {err}\nPerson ID: {person_id}",),
@@ -174,7 +167,7 @@ pub async fn delete_person(
 }
 
 #[get("/person/list?<id>")]
-pub async fn introspect_person(
+pub async fn introspect(
     conn: BususagesDBConn,
     id: i64,
     _superuser: Superuser,
@@ -251,7 +244,7 @@ impl RegistrationForm {
 
 /// /register, but superuser version
 #[post("/person/register", data = "<registration>")]
-pub async fn register_person(
+pub async fn register(
     conn: BususagesDBConn,
     registration: Form<Strict<RegistrationForm>>,
     _superuser: Superuser,
@@ -267,5 +260,5 @@ pub async fn register_person(
         })?;
 
     let id = registration.id;
-    Ok(Redirect::to(uri!(introspect_person(id = id))))
+    Ok(Redirect::to(uri!(introspect(id = id))))
 }
