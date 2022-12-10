@@ -155,7 +155,6 @@ async fn register(
 
     // before going home with it, let's check if it's even possible to register
     if registration.new_state {
-        // TODO: check in the db if the registration is really what the user suggests
         possible_to_register(&drive, currently_registered)
             .map_err(|reason| Flash::error(Redirect::to(uri!(dashboard)), reason.to_string()))?;
     }
