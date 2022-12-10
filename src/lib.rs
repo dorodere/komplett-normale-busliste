@@ -15,7 +15,10 @@ mod tests;
 
 use std::fmt;
 
-use rocket::response::{Flash, Redirect};
+use rocket::{
+    response::{Flash, Redirect},
+    Route,
+};
 use rocket_sync_db_pools::database;
 
 pub use routes::routes;
@@ -28,6 +31,12 @@ pub fn server_error(admin_err: impl fmt::Display, user_err: impl AsRef<str>) -> 
         Redirect::to(uri!(routes::error::server_error_panel)),
         user_err.as_ref(),
     )
+}
+
+pub fn flatten_routes(
+    routes: impl IntoIterator<Item = impl IntoIterator<Item = Route>>,
+) -> Vec<Route> {
+    routes.into_iter().flatten().collect()
 }
 
 #[database("bususages")]

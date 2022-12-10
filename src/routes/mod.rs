@@ -7,13 +7,10 @@ pub mod superuser;
 
 #[must_use]
 pub fn routes() -> Vec<Route> {
-    [
+    crate::flatten_routes([
         authflow::routes(),
         dashboard::routes(),
         error::routes(),
         superuser::routes(),
-    ]
-    .into_iter()
-    .flatten()
-    .collect()
+    ])
 }
