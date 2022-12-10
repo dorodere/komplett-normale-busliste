@@ -1,14 +1,15 @@
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
-use serde::Serialize;
-use rusqlite::types::Value;
-use rocket_dyn_templates::{context, Template};
+use chrono::Utc;
 use rocket::{
     form::{Form, Lenient, Strict},
     request::FlashMessage,
     response::{Flash, Redirect},
+    Route,
 };
-use chrono::Utc;
+use rocket_dyn_templates::{context, Template};
+use rusqlite::types::Value;
+use serde::Serialize;
 
 use crate::{
     date_helpers::{
@@ -22,6 +23,27 @@ use crate::{
     },
     BususagesDBConn,
 };
+
+#[must_use]
+pub fn routes() -> Vec<Route> {
+    routes![
+        panel,
+        drives_panel,
+        create_new_drive,
+        delete_drive,
+        update_deadline,
+        introspect_drive,
+        registrations_panel,
+        person_panel,
+        create_new_person,
+        update_person,
+        delete_person,
+        introspect_person,
+        register_person,
+        settings,
+        set_setting,
+    ]
+}
 
 #[get("/superuser")]
 pub fn panel(flash: Option<FlashMessage<'_>>, _superuser: Superuser) -> Template {

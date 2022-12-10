@@ -16,7 +16,7 @@ use rocket::{
     http::{Cookie, CookieJar, Status},
     request::{FlashMessage, FromRequest, Outcome, Request},
     response::{Flash, Redirect},
-    State,
+    Route, State,
 };
 use rocket_dyn_templates::{context, Template};
 use serde::{Deserialize, Serialize};
@@ -29,6 +29,11 @@ use crate::{
     sql_interface::{self, SearchPersonBy, SearchPersonError},
     BususagesDBConn,
 };
+
+#[must_use]
+pub fn routes() -> Vec<Route> {
+    routes![index, login, verify_token]
+}
 
 #[derive(FromForm)]
 pub struct LoginForm {
