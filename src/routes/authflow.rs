@@ -1,10 +1,5 @@
-use crate::{
-    config::Config,
-    date_helpers::relative_to_absolute,
-    server_error,
-    sql_interface::{self, SearchPersonBy, SearchPersonError},
-    BususagesDBConn,
-};
+use std::{fmt, time::Duration};
+
 use argon2::{
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Algorithm, Argon2, Params, Version,
@@ -25,8 +20,15 @@ use rocket::{
 };
 use rocket_dyn_templates::{context, Template};
 use serde::{Deserialize, Serialize};
-use std::{fmt, time::Duration};
 use thiserror::Error;
+
+use crate::{
+    config::Config,
+    date_helpers::relative_to_absolute,
+    server_error,
+    sql_interface::{self, SearchPersonBy, SearchPersonError},
+    BususagesDBConn,
+};
 
 #[derive(FromForm)]
 pub struct LoginForm {

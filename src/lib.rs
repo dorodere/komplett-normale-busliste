@@ -17,6 +17,7 @@ use std::fmt;
 
 use rocket::response::{Flash, Redirect};
 use rocket_sync_db_pools::database;
+
 pub use routes::routes;
 
 /// A shorthand function for logging an internal server error and redirecting to the page for that.

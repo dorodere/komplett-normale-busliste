@@ -1,7 +1,6 @@
-use {
-    chrono::{Datelike, Utc},
-    std::time::Duration,
-};
+use std::time::Duration;
+
+use chrono::{Datelike, Utc};
 
 /// Converts a relative duration assumed from now to an absolute UNIX timestamp measured in
 /// seconds.

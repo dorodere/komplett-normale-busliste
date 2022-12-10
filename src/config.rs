@@ -1,13 +1,12 @@
-use {
-    base64ct::{Base64, Encoding, Error},
-    hmac::{Hmac, NewMac},
-    rocket::{
+use std::fmt;
+
+use sha2::Sha256;
+use rocket::{
         http::uri,
         serde::{de, Deserialize},
-    },
-    sha2::Sha256,
-    std::fmt,
-};
+    };
+use hmac::{Hmac, NewMac};
+use base64ct::{Base64, Encoding, Error};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {

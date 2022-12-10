@@ -1,15 +1,15 @@
 #![allow(clippy::cast_possible_truncation)] // Irrelevant in this context
 
-use {
-    crate::date_helpers::relative_to_absolute,
-    chrono::Utc,
-    lettre::Address,
-    rocket_sync_db_pools::rusqlite,
-    rusqlite::{named_params, types::Type, types::Value, ToSql},
-    serde::{Deserialize, Serialize},
-    std::{collections::BTreeMap, fmt, time::Duration},
-    thiserror::Error,
-};
+use std::{collections::BTreeMap, fmt, time::Duration};
+
+use thiserror::Error;
+use serde::{Deserialize, Serialize};
+use rusqlite::{named_params, types::Type, types::Value, ToSql};
+use rocket_sync_db_pools::rusqlite;
+use lettre::Address;
+use chrono::Utc;
+
+use crate::date_helpers::relative_to_absolute;
 
 macro_rules! match_constraint_violation {
     ($statement:expr, $custom_error:expr) => {

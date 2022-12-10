@@ -1,12 +1,11 @@
-use {
-    super::sql_interface::{
-        self, DriveFilter, NewPerson, RegistrationUpdate,
-        SearchPersonBy::{Email, Id},
-        SearchRegistrationsBy::{Date, PersonId},
-        UpdatePerson, VisibilityFilter,
-    },
-    chrono::{Days, NaiveDate},
-    rusqlite::{types::Value, Connection},
+use rusqlite::{types::Value, Connection};
+use chrono::{Days, NaiveDate};
+
+use crate::sql_interface::{
+    self, DriveFilter, NewPerson, RegistrationUpdate,
+    SearchPersonBy::{Email, Id},
+    SearchRegistrationsBy::{Date, PersonId},
+    UpdatePerson, VisibilityFilter,
 };
 
 /// Creates a fresh empty database with tables defined.

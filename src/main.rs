@@ -1,12 +1,13 @@
 #![allow(clippy::no_effect_underscore_binding)] // rocket heavily uses those in macros
 
-use komplett_normale_busliste::{config::Config, routes, BususagesDBConn};
 use rocket::{
     fairing::AdHoc,
     fs::{relative, FileServer},
     launch,
 };
 use rocket_dyn_templates::{handlebars::handlebars_helper, Template};
+
+use komplett_normale_busliste::{config::Config, routes, BususagesDBConn};
 
 #[launch]
 fn rocket() -> _ {
