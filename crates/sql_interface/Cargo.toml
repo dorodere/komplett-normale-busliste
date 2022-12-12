@@ -7,4 +7,4 @@ edition = "2021"
 lettre = { version = "0.10", default-features = false, features = ["smtp-transport", "builder", "hostname", "serde", "tokio1", "tokio1-rustls-tls", "rustls-tls"] }
 thiserror = "1.0"
 time = { version = "0.3", features = ["macros"] }
-rusqlite = { version = "0.27", features = ["time"] }
+rusqlite = { version = "0.28", features = ["time"] }

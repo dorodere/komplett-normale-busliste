@@ -7,10 +7,10 @@ use rocket::{
 };
 use rocket_dyn_templates::{handlebars::handlebars_helper, Template};
 
-use komplett_normale_busliste::{config::Config, routes, BususagesDBConn};
+use backend::{config::Config, routes, BususagesDBConn};
 
 #[launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
     rocket::build()
         .attach(Template::custom(|engines| {
             engines

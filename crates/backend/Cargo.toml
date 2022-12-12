@@ -11,6 +11,7 @@ cookie = "0.16"
 hmac = "0.11"
 jwt = "0.14"
 log = "0.4"
+libsqlite3-sys = "0.25"
 rand = "0.8"
 serde = "1"
 serde_json = "1.0"
@@ -38,16 +39,22 @@ default-features = false
 features = ["smtp-transport", "builder", "hostname", "serde", "tokio1", "tokio1-rustls-tls", "rustls-tls"]
 
 [dependencies.rocket]
-version = "0.5.0-rc.2"
+git = "https://github.com/dorodere/Rocket"
+branch = "v0.5-rc"
 
 [dependencies.rocket_sync_db_pools]
-git = "https://github.com/SergioBenitez/Rocket"
-rev = "162fafa"
+git = "https://github.com/dorodere/Rocket"
+branch = "v0.5-rc"
 default_features = false
 features = ["sqlite_pool"]
 
 [dependencies.rocket_dyn_templates]
-version = "0.1.0-rc.1"
+git = "https://github.com/dorodere/Rocket"
+branch = "v0.5-rc"
 features = ["handlebars"]
+
+[dependencies.rusqlite]
+version = "0.28"
+features = ["chrono"]
 
 # vim:ft=dosini:

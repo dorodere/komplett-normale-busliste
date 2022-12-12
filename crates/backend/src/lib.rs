@@ -9,6 +9,9 @@ extern crate rocket;
 pub mod config;
 pub mod date_helpers;
 pub mod routes;
+pub mod sql_interface;
+#[cfg(test)]
+mod tests;
 
 use std::fmt;
 

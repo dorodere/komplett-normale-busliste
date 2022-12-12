@@ -1,4 +1,4 @@
 /target
 /Rocket.toml
-/testing-database.db
+testing-database.db
 __pycache__

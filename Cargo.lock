@@ -152,11 +152,13 @@ dependencies = [
  "hmac 0.11.0",
  "jwt",
  "lettre",
+ "libsqlite3-sys",
  "log",
  "rand",
- "rocket 0.5.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rocket",
  "rocket_dyn_templates",
  "rocket_sync_db_pools",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2 0.9.9",
@@ -736,26 +738,20 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.11.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
  "ahash",
 ]
 
 [[package]]
-name = "hashbrown"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-
-[[package]]
 name = "hashlink"
-version = "0.7.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7249a3129cbc1ffccd74857f81464a323a152173cdb134e0fd81bc803b29facf"
+checksum = "69fe1fcf8b4278d860ad0548329f892a3631fb63f82574df68275f34cdbe0ffa"
 dependencies = [
- "hashbrown 0.11.2",
+ "hashbrown",
 ]
 
 [[package]]
@@ -930,7 +926,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
 dependencies = [
  "autocfg",
- "hashbrown 0.12.3",
+ "hashbrown",
  "serde",
 ]
 
@@ -1076,9 +1072,9 @@ checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.24.2"
+version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "898745e570c7d0453cc1fbc4a701eb6c662ed54e8fec8b7d14be137ebeeb9d14"
+checksum = "29f835d03d717946d28b1d1ed632eb6f0e24a299388ee623d0c23118d3e8a7fa"
 dependencies = [
  "pkg-config",
  "vcpkg",
@@ -1615,9 +1611,9 @@ dependencies = [
 
 [[package]]
 name = "r2d2_sqlite"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fdc8e4da70586127893be32b7adf21326a4c6b1aba907611edf467d13ffe895"
+checksum = "b4f5d0337e99cd5cacd91ffc326c6cc9d8078def459df560c4f9bf9ba4a51034"
 dependencies = [
  "r2d2",
  "rusqlite",
@@ -1733,8 +1729,7 @@ dependencies = [
 [[package]]
 name = "rocket"
 version = "0.5.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98ead083fce4a405feb349cf09abdf64471c6077f14e0ce59364aa90d4b99317"
+source = "git+https://github.com/dorodere/Rocket?branch=v0.5-rc#8051e09ad1313208640a9ae5351f1412d41477d6"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -1754,45 +1749,8 @@ dependencies = [
  "pin-project-lite",
  "rand",
  "ref-cast",
- "rocket_codegen 0.5.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "rocket_http 0.5.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
- "state",
- "tempfile",
- "time 0.3.17",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "ubyte",
- "version_check",
- "yansi",
-]
-
-[[package]]
-name = "rocket"
-version = "0.5.0-rc.2"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=162fafa#162fafa0f1b5d9045bf342356671859f0f21c4cc"
-dependencies = [
- "async-stream",
- "async-trait",
- "atomic",
- "atty",
- "binascii",
- "bytes",
- "either",
- "figment",
- "futures",
- "indexmap",
- "log",
- "memchr",
- "multer",
- "num_cpus",
- "parking_lot",
- "pin-project-lite",
- "rand",
- "ref-cast",
- "rocket_codegen 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=162fafa)",
- "rocket_http 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=162fafa)",
+ "rocket_codegen",
+ "rocket_http",
  "serde",
  "state",
  "tempfile",
@@ -1808,30 +1766,14 @@ dependencies = [
 [[package]]
 name = "rocket_codegen"
 version = "0.5.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6aeb6bb9c61e9cd2c00d70ea267bf36f76a4cc615e5908b349c2f9d93999b47"
+source = "git+https://github.com/dorodere/Rocket?branch=v0.5-rc#8051e09ad1313208640a9ae5351f1412d41477d6"
 dependencies = [
  "devise",
  "glob",
  "indexmap",
  "proc-macro2",
  "quote",
- "rocket_http 0.5.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn",
- "unicode-xid",
-]
-
-[[package]]
-name = "rocket_codegen"
-version = "0.5.0-rc.2"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=162fafa#162fafa0f1b5d9045bf342356671859f0f21c4cc"
-dependencies = [
- "devise",
- "glob",
- "indexmap",
- "proc-macro2",
- "quote",
- "rocket_http 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=162fafa)",
+ "rocket_http",
  "syn",
  "unicode-xid",
 ]
@@ -1839,47 +1781,19 @@ dependencies = [
 [[package]]
 name = "rocket_dyn_templates"
 version = "0.1.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bab13df598440527c200f46fb944dc55d8d67a1818b617eb5a3981dcd8b63fd2"
+source = "git+https://github.com/dorodere/Rocket?branch=v0.5-rc#8051e09ad1313208640a9ae5351f1412d41477d6"
 dependencies = [
  "glob",
  "handlebars",
  "normpath",
  "notify",
- "rocket 0.5.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rocket",
 ]
 
 [[package]]
 name = "rocket_http"
 version = "0.5.0-rc.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ded65d127954de3c12471630bf4b81a2792f065984461e65b91d0fdaafc17a2"
-dependencies = [
- "cookie",
- "either",
- "futures",
- "http",
- "hyper",
- "indexmap",
- "log",
- "memchr",
- "pear",
- "percent-encoding",
- "pin-project-lite",
- "ref-cast",
- "serde",
- "smallvec",
- "stable-pattern",
- "state",
- "time 0.3.17",
- "tokio",
- "uncased",
-]
-
-[[package]]
-name = "rocket_http"
-version = "0.5.0-rc.2"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=162fafa#162fafa0f1b5d9045bf342356671859f0f21c4cc"
+source = "git+https://github.com/dorodere/Rocket?branch=v0.5-rc#8051e09ad1313208640a9ae5351f1412d41477d6"
 dependencies = [
  "cookie",
  "either",
@@ -1905,22 +1819,21 @@ dependencies = [
 [[package]]
 name = "rocket_sync_db_pools"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=162fafa#162fafa0f1b5d9045bf342356671859f0f21c4cc"
+source = "git+https://github.com/dorodere/Rocket?branch=v0.5-rc#8051e09ad1313208640a9ae5351f1412d41477d6"
 dependencies = [
  "r2d2",
  "r2d2_sqlite",
- "rocket 0.5.0-rc.2 (git+https://github.com/SergioBenitez/Rocket?rev=162fafa)",
+ "rocket",
  "rocket_sync_db_pools_codegen",
  "rusqlite",
  "serde",
  "tokio",
- "version_check",
 ]
 
 [[package]]
 name = "rocket_sync_db_pools_codegen"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/SergioBenitez/Rocket?rev=162fafa#162fafa0f1b5d9045bf342356671859f0f21c4cc"
+source = "git+https://github.com/dorodere/Rocket?branch=v0.5-rc#8051e09ad1313208640a9ae5351f1412d41477d6"
 dependencies = [
  "devise",
  "quote",
@@ -1928,16 +1841,16 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.27.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85127183a999f7db96d1a976a309eebbfb6ea3b0b400ddd8340190129de6eb7a"
+checksum = "01e213bc3ecb39ac32e81e51ebe31fd888a940515173e3a18a35f8c6e896422a"
 dependencies = [
  "bitflags",
+ "chrono",
  "fallible-iterator",
  "fallible-streaming-iterator",
  "hashlink",
  "libsqlite3-sys",
- "memchr",
  "smallvec",
  "time 0.3.17",
 ]
