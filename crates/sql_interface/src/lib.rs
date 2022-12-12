@@ -37,7 +37,7 @@ pub struct Person {
 pub struct Drive {
     pub id: i64,
     pub date: DateTime,
-    pub deadline: Option<chrono::NaiveDateTime>,
+    pub deadline: Option<DateTime>,
     pub registration_cap: Option<u32>,
     pub already_registered_count: u32,
 }
