@@ -1,4 +1,4 @@
-use rusqlite::types::{FromSql, ValueRef};
+use rusqlite::types::ValueRef;
 use time::OffsetDateTime as DateTime;
 
 use crate::sql_struct::{next_converted, ReconstructResult, SqlStruct};

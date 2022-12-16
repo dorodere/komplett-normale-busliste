@@ -1,11 +1,7 @@
 use std::marker::PhantomData;
 
 use indoc::indoc;
-use rusqlite::{
-    params,
-    types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef},
-    Connection,
-};
+use rusqlite::{named_params, params, Connection};
 use time::macros::datetime;
 
 use crate::{statement::Select, types::Drive};
@@ -57,9 +53,20 @@ fn drive_roundtrip() {
     let query = Select {
         conn: &mut conn,
         output_type: PhantomData::<Drive>,
-        condition: String::new(),
+        condition: None,
+        joins: Vec::new(),
+        params: named_params! {},
     };
     let rows = query.run().unwrap();
+    assert_eq!(rows, vec![first.clone(), second]);
 
-    assert_eq!(rows, vec![first, second]);
+    let query = Select {
+        condition: Some("drivedate == :date"),
+        params: named_params! {
+            ":date": first.date,
+        },
+        ..query
+    };
+    let rows = query.run().unwrap();
+    assert_eq!(rows, vec![first]);
 }

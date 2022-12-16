@@ -1,5 +1,5 @@
-use rusqlite::{types::Value, Connection};
 use chrono::{Days, NaiveDate};
+use rusqlite::{types::Value, Connection};
 
 use crate::sql_interface::{
     self, DriveFilter, NewPerson, RegistrationUpdate,
