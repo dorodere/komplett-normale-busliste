@@ -2,12 +2,12 @@
 
 use std::{collections::BTreeMap, fmt, time::Duration};
 
-use thiserror::Error;
-use serde::{Deserialize, Serialize};
-use rusqlite::{named_params, types::Type, types::Value, ToSql};
-use rocket_sync_db_pools::rusqlite;
-use lettre::Address;
 use chrono::Utc;
+use lettre::Address;
+use rocket_sync_db_pools::rusqlite;
+use rusqlite::{named_params, types::Type, types::Value, ToSql};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::date_helpers::relative_to_absolute;
 
@@ -154,7 +154,7 @@ pub fn init_db_if_necessary(
         )
         .is_err()
     {
-        conn.execute_batch(include_str!("./init_db.sql"))?;
+        conn.execute_batch(include_str!("../../sql_interface/src/init_db.sql"))?;
         Ok(DatabaseStatus::Created)
     } else {
         Ok(DatabaseStatus::AlreadyExistent)

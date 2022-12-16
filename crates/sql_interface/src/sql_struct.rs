@@ -1,4 +1,4 @@
-use rusqlite::types::{FromSqlResult, ValueRef};
+use rusqlite::types::{FromSql, FromSqlError, ValueRef};
 use thiserror::Error;
 
 pub trait SqlStruct
@@ -14,12 +14,20 @@ where
 
     /// Reconstructs the implementor of this trait from a row, following the schema of
     /// [`SqlStruct::select_exprs`] in the same order.
-    fn from_row<'a>(row: impl Iterator<Item = ValueRef<'a>>) -> FromSqlResult<Self>;
+    fn from_row<'a>(row: impl Iterator<Item = ValueRef<'a>>) -> ReconstructResult<Self>;
 }
 
 #[derive(Debug, Error)]
-#[error("Not enough values in row iterator. Likely the schema is invalid, or the mapping machinery has a bug.")]
-pub struct NotEnoughValues;
+pub enum ReconstructError {
+    #[error("Query or database error: {0}")]
+    RusqliteError(#[from] rusqlite::Error),
+    #[error("Could not convert value from specific SQL datatype: {0}")]
+    FromSqlError(#[from] FromSqlError),
+    #[error("Not enough values in row iterator. Likely the schema is invalid, or the mapping machinery has a bug.")]
+    NotEnoughValues,
+}
+
+pub type ReconstructResult<T> = Result<T, ReconstructError>;
 
 macro_rules! impl_sqlstruct_for_tuple {
     ($( ($( $generics:ident ),+ $(,)?) ),* $(,)?) => { $(
@@ -42,7 +50,7 @@ macro_rules! impl_sqlstruct_for_tuple {
                     .collect()
             }
 
-            fn from_row<'a>(mut row: impl Iterator<Item = ValueRef<'a>>) -> FromSqlResult<Self> {
+            fn from_row<'a>(mut row: impl Iterator<Item = ValueRef<'a>>) -> ReconstructResult<Self> {
                 Ok(( $(
                     $generics::from_row((&mut row).take($generics::select_exprs().len()))? ,
                 )* ))
@@ -65,3 +73,15 @@ impl_sqlstruct_for_tuple!(
     (A, B, C, D, E, F, G, H, I, J, K),
     (A, B, C, D, E, F, G, H, I, J, K, L),
 );
+
+/// Helper function to retrieve the next cell from a row iterator, while mapping
+/// [`None`] to [`ReconstructionError::NotEnoughValues`].
+pub fn next_converted<'a, T: FromSql>(
+    mut row: impl Iterator<Item = ValueRef<'a>>,
+) -> ReconstructResult<T> {
+    let value = row
+        .next()
+        .ok_or_else(|| ReconstructError::NotEnoughValues)?;
+    let converted = FromSql::column_result(value)?;
+    Ok(converted)
+}
