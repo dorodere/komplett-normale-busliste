@@ -4,9 +4,9 @@ use indoc::formatdoc;
 use itertools::Itertools;
 use rusqlite::{Connection, Params};
 
-use crate::sql_struct::{ReconstructResult, SqlStruct};
+use crate::sql_struct::{Reconstruct, ReconstructResult};
 
-pub struct Select<'a, T: SqlStruct, P: Params + Clone> {
+pub struct Select<'a, T: Reconstruct, P: Params + Clone> {
     pub conn: &'a mut Connection,
 
     /// Which type should every returned row have, once the query completed.
@@ -23,7 +23,7 @@ pub struct Join {
     on: String,
 }
 
-impl<T: SqlStruct, P: Params + Clone> Select<'_, T, P> {
+impl<T: Reconstruct, P: Params + Clone> Select<'_, T, P> {
     pub fn run(&self) -> ReconstructResult<Vec<T>> {
         // figure out which expressions are needed in order to reconstruct T
         let select_exprs = T::select_exprs().join(", ");

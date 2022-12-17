@@ -5,8 +5,8 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{parse_macro_input, spanned::Spanned, Data, DeriveInput, Error, Ident, Result};
 
-#[proc_macro_derive(SqlStruct)]
-pub fn derive_sqlstruct(item: TokenStream) -> TokenStream {
+#[proc_macro_derive(Reconstruct)]
+pub fn derive_reconstruct(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     generate_impl(input)
@@ -48,7 +48,7 @@ fn expand(
     field_idents: Vec<&Ident>,
 ) -> TokenStream2 {
     quote! {
-        impl crate::sql_struct::SqlStruct for #target_ident {
+        impl crate::sql_struct::Reconstruct for #target_ident {
             fn required_tables() -> ::std::vec::Vec<&'static str> {
                 ::std::vec![#table]
             }

@@ -1,7 +1,7 @@
 use rusqlite::types::{FromSql, FromSqlError, ValueRef};
 use thiserror::Error;
 
-pub trait SqlStruct
+pub trait Reconstruct
 where
     Self: Sized,
 {
@@ -9,11 +9,11 @@ where
     fn required_tables() -> Vec<&'static str>;
 
     /// Returns all SQL expressions this struct needs in order to be built in
-    /// [`SqlStruct::from_row`].
+    /// [`Reconstruct::from_row`].
     fn select_exprs() -> Vec<&'static str>;
 
     /// Reconstructs the implementor of this trait from a row, following the schema of
-    /// [`SqlStruct::select_exprs`] in the same order.
+    /// [`Reconstruct::select_exprs`] in the same order.
     fn from_row<'a>(row: impl Iterator<Item = ValueRef<'a>>) -> ReconstructResult<Self>;
 }
 
@@ -29,12 +29,12 @@ pub enum ReconstructError {
 
 pub type ReconstructResult<T> = Result<T, ReconstructError>;
 
-macro_rules! impl_sqlstruct_for_tuple {
+macro_rules! impl_reconstruct_for_tuple {
     ($( ($( $generics:ident ),+ $(,)?) ),* $(,)?) => { $(
         // the comma is important, consider 1 generic
-        impl<$( $generics ),*> SqlStruct for ( $( $generics, )* )
+        impl<$( $generics ),*> Reconstruct for ( $( $generics, )* )
         where $(
-            $generics: SqlStruct,
+            $generics: Reconstruct,
         )* {
             fn required_tables() -> Vec<&'static str> {
                 [$( $generics::required_tables() ),*]
@@ -59,7 +59,7 @@ macro_rules! impl_sqlstruct_for_tuple {
     )* };
 }
 
-impl_sqlstruct_for_tuple!(
+impl_reconstruct_for_tuple!(
     (A,),
     (A, B),
     (A, B, C),
@@ -75,7 +75,7 @@ impl_sqlstruct_for_tuple!(
 );
 
 /// Helper function to retrieve the next cell from a row iterator, while mapping
-/// [`None`] to [`ReconstructionError::NotEnoughValues`].
+/// [`None`] to [`Reconstruct::NotEnoughValues`].
 pub fn next_converted<'a, T: FromSql>(
     mut row: impl Iterator<Item = ValueRef<'a>>,
 ) -> ReconstructResult<T> {

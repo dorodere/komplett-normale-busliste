@@ -1,7 +1,10 @@
-use rusqlite::types::{FromSql, FromSqlError, ValueRef};
+use rusqlite::{
+    types::{FromSql, FromSqlError, ValueRef},
+    ToSql,
+};
 use time::OffsetDateTime as DateTime;
 
-use sql_interface_macros::SqlStruct;
+use sql_interface_macros::FromMultipleSql;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Address(pub lettre::Address);
@@ -17,7 +20,14 @@ impl FromSql for Address {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, SqlStruct)]
+impl ToSql for Address {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        let repr: &str = self.0.as_ref();
+        repr.to_sql()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, FromMultipleSql)]
 pub struct Person {
     pub id: i64,
     pub prename: String,
@@ -44,7 +54,7 @@ pub struct Person {
 }
 
 /// A drive a user can register for and a registration then refers to.
-#[derive(Clone, Debug, PartialEq, Eq, SqlStruct)]
+#[derive(Clone, Debug, PartialEq, Eq, FromMultipleSql)]
 pub struct Drive {
     pub id: i64,
     pub date: DateTime,
