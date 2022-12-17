@@ -28,7 +28,7 @@ impl<T: SqlStruct, P: Params + Clone> Select<'_, T, P> {
         // figure out which expressions are needed in order to reconstruct T
         let select_exprs = T::select_exprs().join(", ");
 
-        // deduplicate all tables (throwing all out which are contained in joins *later* on)
+        // deduplicate all tables
         let mut tables: HashSet<_> = T::required_tables().into_iter().collect();
 
         // generate the filtering + join clauses
@@ -37,6 +37,7 @@ impl<T: SqlStruct, P: Params + Clone> Select<'_, T, P> {
             .joins
             .iter()
             .inspect(|join| {
+                // table doesn't need to be in FROM if it's joined already
                 tables.remove(join.table.as_str());
             })
             .map(|join| format!("LEFT OUTER JOIN {} ON ({})", join.table, join.on))
