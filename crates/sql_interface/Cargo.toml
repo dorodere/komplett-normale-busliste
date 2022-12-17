@@ -11,4 +11,4 @@ thiserror = "1.0"
 time = { version = "0.3", features = ["macros"] }
 rusqlite = { version = "0.28", features = ["time"] }
 
-sql_interface_derive = { path = "../sql_interface_derive" }
+sql_interface_macros = { path = "../sql_interface_macros" }

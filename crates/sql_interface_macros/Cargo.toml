@@ -1,5 +1,5 @@
 [package]
-name = "sql_interface_derive"
+name = "sql_interface_macros"
 version = "0.1.0"
 edition = "2021"
 

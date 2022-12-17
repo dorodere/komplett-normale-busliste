@@ -4,5 +4,5 @@ resolver = "2"
 members = [
   "crates/backend",
   "crates/sql_interface",
-  "crates/sql_interface_derive",
+  "crates/sql_interface_macros",
 ]

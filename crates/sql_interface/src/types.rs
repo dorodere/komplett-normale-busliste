@@ -2,7 +2,7 @@ use rusqlite::types::ValueRef;
 use time::OffsetDateTime as DateTime;
 
 use crate::sql_struct::{next_converted, ReconstructResult, SqlStruct};
-use sql_interface_derive::SqlStruct;
+use sql_interface_macros::SqlStruct;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Person {
