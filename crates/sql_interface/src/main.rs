@@ -1,4 +1,4 @@
-use std::{env, marker::PhantomData, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use rusqlite::Connection;
 use sql_interface::{statement::Select, types::Drive};
@@ -28,10 +28,11 @@ fn main() {
 
     let query = Select {
         conn: &mut conn,
-        output_type: PhantomData::<Drive>,
         joins: Vec::new(),
         condition: None,
         params: (),
     };
-    dbg!(query.run().unwrap());
+    let items: Vec<Drive> = query.run().unwrap();
+
+    dbg!(items);
 }

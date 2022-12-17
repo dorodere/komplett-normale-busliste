@@ -4,7 +4,7 @@ use rusqlite::{
 };
 use time::OffsetDateTime as DateTime;
 
-use sql_interface_macros::FromMultipleSql;
+use sql_interface_macros::Reconstruct;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Address(pub lettre::Address);
@@ -27,7 +27,7 @@ impl ToSql for Address {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, FromMultipleSql)]
+#[derive(Debug, PartialEq, Eq, Reconstruct)]
 pub struct Person {
     pub id: i64,
     pub prename: String,
@@ -54,7 +54,7 @@ pub struct Person {
 }
 
 /// A drive a user can register for and a registration then refers to.
-#[derive(Clone, Debug, PartialEq, Eq, FromMultipleSql)]
+#[derive(Clone, Debug, PartialEq, Eq, Reconstruct)]
 pub struct Drive {
     pub id: i64,
     pub date: DateTime,

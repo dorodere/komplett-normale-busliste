@@ -1,4 +1,4 @@
-use std::{collections::HashSet, marker::PhantomData};
+use std::collections::HashSet;
 
 use indoc::formatdoc;
 use itertools::Itertools;
@@ -6,25 +6,26 @@ use rusqlite::{Connection, Params};
 
 use crate::sql_struct::{Reconstruct, ReconstructResult};
 
-pub struct Select<'a, T: Reconstruct, P: Params + Clone> {
+pub struct Select<'a, P: Params + Clone> {
     pub conn: &'a mut Connection,
-
-    /// Which type should every returned row have, once the query completed.
-    pub output_type: PhantomData<T>,
 
     /// Which `LEFT OUTER JOIN`s to use in this query.
     pub joins: Vec<Join>,
+
+    /// What should go into the `WHERE` clause.
     pub condition: Option<&'static str>,
+
+    /// Which parameters to insert in the query.
     pub params: P,
 }
 
 pub struct Join {
-    table: String,
-    on: String,
+    table: &'static str,
+    on: &'static str,
 }
 
-impl<T: Reconstruct, P: Params + Clone> Select<'_, T, P> {
-    pub fn run(&self) -> ReconstructResult<Vec<T>> {
+impl<P: Params + Clone> Select<'_, P> {
+    pub fn run<T: Reconstruct>(&self) -> ReconstructResult<Vec<T>> {
         // figure out which expressions are needed in order to reconstruct T
         let select_exprs = T::select_exprs().join(", ");
 
@@ -38,7 +39,7 @@ impl<T: Reconstruct, P: Params + Clone> Select<'_, T, P> {
             .iter()
             .inspect(|join| {
                 // table doesn't need to be in FROM if it's joined already
-                tables.remove(join.table.as_str());
+                tables.remove(join.table);
             })
             .map(|join| format!("LEFT OUTER JOIN {} ON ({})", join.table, join.on))
             .join("\n");
