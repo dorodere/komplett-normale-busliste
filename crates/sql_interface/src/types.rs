@@ -29,6 +29,7 @@ impl ToSql for Address {
 
 #[derive(Debug, PartialEq, Eq, Reconstruct)]
 pub struct Person {
+    #[sql(column = "person_id")]
     pub id: i64,
     pub prename: String,
     pub name: String,
@@ -56,7 +57,9 @@ pub struct Person {
 /// A drive a user can register for and a registration then refers to.
 #[derive(Clone, Debug, PartialEq, Eq, Reconstruct)]
 pub struct Drive {
+    #[sql(column = "drive_id")]
     pub id: i64,
+    #[sql(column = "drivedate")]
     pub date: DateTime,
     pub deadline: Option<DateTime>,
     pub registration_cap: Option<u32>,
