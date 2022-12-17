@@ -24,7 +24,9 @@ def init_persons(cur, tablename="person"):
     cur.executescript(with_modified_tablename)
 
 
-def init_database(filename: str = toplevel() / "testing-database.db"):
+def init_database(
+    filename: str = toplevel() / "crates" / "backend" / "testing-database.db",
+):
     conn = sqlite3.connect(filename)
     cur = conn.cursor()
 

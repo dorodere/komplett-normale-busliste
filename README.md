@@ -37,19 +37,25 @@ Thanks for considering doing so! You can take these steps:
    cp RocketExample.toml Rocket.toml
    ```
 
-5. Initialize the database with some dummy data:
+5. Navigate to the backend crate:
+
+   ```
+   cd crates/backend
+   ```
+
+6. Initialize the database with some dummy data:
 
    ```
    python scripts/init_db.py
    ```
 
-6. Compile, run and let's go!
+7. Compile, run and let's go!
 
    ```
    cargo run
    ```
 
-7. Now open your web browser at `http://127.0.0.1:8008`. In the email field you can enter
+8. Now open your web browser at `http://127.0.0.1:8008`. In the email field you can enter
    `john_doe@example.com`, hit enter, and click the link output in the console. You're logged in now
    and can do whatever you want! (in your local testing instance, komplett-normale-busliste knows
    automatically not to really send the email when running in debug mode)
@@ -62,6 +68,7 @@ git clone https://github.com/dorodere/komplett-normale-busliste.git
 cd komplett-normale-busliste
 cp RocketExample.toml Rocket.toml
 python scripts/init_db.py
+cd crates/backend
 git apply slightly-hacky-local-testing.patch
 cargo run
 ```

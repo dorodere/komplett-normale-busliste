@@ -46,7 +46,9 @@ def parse_args():
         epilog="bottom text",
     )
     parser.add_argument(
-        "--database", default=str(toplevel() / "testing-database.db"), type=Path
+        "--database",
+        default=str(toplevel() / "crates" / "backend" / "testing-database.db"),
+        type=Path,
     )
     parser.add_argument("migration_scripts", nargs="+", type=Path)
     return parser.parse_args()

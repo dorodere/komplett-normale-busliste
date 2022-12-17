@@ -9,4 +9,4 @@ jwt_key = "dGVzdGluZwo="
 smtp_server = "example.com"
 
 [global.databases]
-bususages = { url = "./testing-database.db" }
+bususages = { url = "./testing-database.db" }  # as long as the backend is launched with CWD crates/backend, this is fine
