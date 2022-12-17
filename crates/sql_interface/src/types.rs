@@ -1,15 +1,28 @@
-use rusqlite::types::ValueRef;
+use rusqlite::types::{FromSql, FromSqlError, ValueRef};
 use time::OffsetDateTime as DateTime;
 
-use crate::sql_struct::{next_converted, ReconstructResult, SqlStruct};
 use sql_interface_macros::SqlStruct;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Address(pub lettre::Address);
+
+impl FromSql for Address {
+    fn column_result(value: ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        let address = value
+            .as_str()?
+            .parse()
+            .map_err(|err| FromSqlError::Other(Box::new(err)))?;
+
+        Ok(Self(address))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, SqlStruct)]
 pub struct Person {
     pub id: i64,
     pub prename: String,
     pub name: String,
-    pub email: lettre::Address,
+    pub email: Address,
 
     /// The token used to authenticate a login. Is always set to [`Option::None`] in case no token
     /// is set or it's unnecessary for the query.
