@@ -2084,8 +2084,18 @@ dependencies = [
  "itertools",
  "lettre",
  "rusqlite",
+ "sql_interface_derive",
  "thiserror",
  "time 0.3.17",
+]
+
+[[package]]
+name = "sql_interface_derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

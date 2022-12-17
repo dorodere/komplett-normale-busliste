@@ -2,6 +2,7 @@ use rusqlite::types::ValueRef;
 use time::OffsetDateTime as DateTime;
 
 use crate::sql_struct::{next_converted, ReconstructResult, SqlStruct};
+use sql_interface_derive::SqlStruct;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Person {
@@ -30,7 +31,7 @@ pub struct Person {
 }
 
 /// A drive a user can register for and a registration then refers to.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, SqlStruct)]
 pub struct Drive {
     pub id: i64,
     pub date: DateTime,
@@ -38,32 +39,8 @@ pub struct Drive {
     pub registration_cap: Option<u32>,
 }
 
-impl SqlStruct for Drive {
-    fn required_tables() -> Vec<&'static str> {
-        vec!["drive"]
-    }
-
-    fn select_exprs() -> Vec<&'static str> {
-        vec![
-            "drive.drive_id",
-            "drive.drivedate",
-            "drive.deadline",
-            "drive.registration_cap",
-        ]
-    }
-
-    fn from_row<'a>(mut row: impl Iterator<Item = ValueRef<'a>>) -> ReconstructResult<Self> {
-        Ok(Self {
-            id: next_converted(&mut row)?,
-            date: next_converted(&mut row)?,
-            deadline: next_converted(&mut row)?,
-            registration_cap: next_converted(&mut row)?,
-        })
-    }
-}
-
 /// How a person uses the bus on a specfic date.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Registration {
     /// The person which registered the bususage. `token` and `token_expiration` are set to
     /// [`Option::None`] because they're irrelevant.
