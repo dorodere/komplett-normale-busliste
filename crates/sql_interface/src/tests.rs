@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use indoc::indoc;
 use rusqlite::{named_params, params, Connection};
 use time::macros::datetime;
@@ -52,12 +50,11 @@ fn drive_roundtrip() {
 
     let query = Select {
         conn: &mut conn,
-        output_type: PhantomData::<Drive>,
         condition: None,
         joins: Vec::new(),
         params: named_params! {},
     };
-    let rows = query.run().unwrap();
+    let rows: Vec<Drive> = query.run().unwrap();
     assert_eq!(rows, vec![first.clone(), second]);
 
     let query = Select {
@@ -67,6 +64,6 @@ fn drive_roundtrip() {
         },
         ..query
     };
-    let rows = query.run().unwrap();
+    let rows: Vec<Drive> = query.run().unwrap();
     assert_eq!(rows, vec![first]);
 }
