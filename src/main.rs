@@ -24,7 +24,7 @@ use {
     rocket_dyn_templates::{context, handlebars::handlebars_helper, Template},
     rocket_sync_db_pools::{database, rusqlite},
     serde::Serialize,
-    sql_interface::{ApplyRegistrationError, DeadlineFilter, SearchRegistrationsBy},
+    sql_interface::{ApplyRegistrationError, DriveFilter, SearchRegistrationsBy},
     std::fmt,
 };
 
@@ -63,13 +63,14 @@ async fn dashboard(
     #[derive(Debug, Serialize)]
     struct TemplateRegistration {
         pretty_date: String,
+        locked_reason: Option<String>,
         registration: sql_interface::Registration,
     }
 
     let mut registrations = [Vec::new(), Vec::new()];
     let person_id = user.person_id();
 
-    for (i, filter) in [DeadlineFilter::OnlyAccessible, DeadlineFilter::OnlyLocked]
+    for (i, filter) in [DriveFilter::OnlyFuture, DriveFilter::OnlyPast]
         .into_iter()
         .enumerate()
     {
@@ -94,7 +95,10 @@ async fn dashboard(
         let as_template = from_db
             .into_iter()
             .map(|registration| TemplateRegistration {
-                pretty_date: format_date(registration.date),
+                pretty_date: format_date(registration.drive.date),
+                locked_reason: possible_to_register(&registration.drive, !registration.registered)
+                    .err()
+                    .map(|reason| reason.to_string()),
                 registration,
             })
             .collect();
@@ -103,14 +107,14 @@ async fn dashboard(
     }
 
     let flash = flash.map(|flashmsg| flashmsg.message().to_string());
-    let [accessible_regs, locked_regs] = registrations;
+    let [future_regs, past_regs] = registrations;
 
     Ok(Template::render(
         "dashboard",
         context! {
             flash,
-            accessible_regs,
-            locked_regs,
+            future_regs,
+            past_regs,
             show_superuser_controls: superuser.is_some(),
         },
     ))
@@ -150,8 +154,8 @@ async fn register(
     registration: Form<Strict<Registration>>,
 ) -> Result<Redirect, Flash<Redirect>> {
     let query_date = time_to_chrono_date(registration.date);
-    let deadline = conn
-        .run(move |c| sql_interface::get_drive_deadline(c, query_date))
+    let drive = conn
+        .run(move |c| sql_interface::get_drive(c, query_date))
         .await
         .map_err(|err| {
             server_error(
@@ -162,19 +166,37 @@ async fn register(
                 "ein Fehler trat während des Abfragens der Anmeldungsdeadline auf",
             )
         })?
-        .unwrap_or_else(|| {
-            time_to_chrono_date(registration.date)
-                .and_hms_opt(0, 0, 0)
-                .unwrap()
-        });
+        .ok_or_else(|| {
+            Flash::error(
+                Redirect::to(uri!(dashboard)),
+                "Das Datum der Fahrt ist nicht valide, versuch es nochmal.",
+            )
+        })?;
 
-    let now = Utc::now().naive_utc();
+    let person_id = user.person_id();
+    let currently_registered = conn
+        .run(move |c| sql_interface::is_registered(c, person_id, drive.date))
+        .await
+        .map_err(|err| {
+            server_error(
+                format!(
+                    "Error while querying registration for {} on {}: {}",
+                    person_id, registration.date, err
+                ),
+                "ein Fehler trat während des Abprüfens der aktuellen Registrierung auf",
+            )
+        })?;
 
-    if deadline <= now {
-        return Err(Flash::error(
-            Redirect::to(uri!(dashboard)),
-            "Die Deadline für diese Fahrt ist bereits abgelaufen.",
-        ));
+    if currently_registered == registration.new_state {
+        // registration would be a no-op
+        return Ok(Redirect::to(uri!(dashboard)));
+    }
+
+    // before going home with it, let's check if it's even possible to register
+    if registration.new_state {
+        // TODO: check in the db if the registration is really what the user suggests
+        possible_to_register(&drive, currently_registered)
+            .map_err(|reason| Flash::error(Redirect::to(uri!(dashboard)), reason.to_string()))?;
     }
 
     let update = registration.to_registration_update(&user);
@@ -198,6 +220,46 @@ async fn register(
     };
 
     Ok(Redirect::to(uri!(dashboard)))
+}
+
+enum ImpossibleReason {
+    RegistrationCapReached,
+    DeadlineExpired,
+}
+
+impl fmt::Display for ImpossibleReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DeadlineExpired => {
+                write!(f, "Deadline ist abgelaufen")
+            }
+            Self::RegistrationCapReached => write!(f, "Maximale Registrierungen erreicht"),
+        }
+    }
+}
+
+fn possible_to_register(
+    drive: &sql_interface::Drive,
+    wants_to_register: bool,
+) -> Result<(), ImpossibleReason> {
+    let now = Utc::now().naive_utc();
+
+    if drive
+        .deadline
+        .map(|deadline| deadline < now)
+        .unwrap_or(false)
+    {
+        Err(ImpossibleReason::DeadlineExpired)
+    } else if wants_to_register
+        && drive
+            .registration_cap
+            .map(|cap| cap <= drive.already_registered_count)
+            .unwrap_or(false)
+    {
+        Err(ImpossibleReason::RegistrationCapReached)
+    } else {
+        Ok(())
+    }
 }
 
 #[launch]

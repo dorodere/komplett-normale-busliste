@@ -89,21 +89,27 @@ fn row_to_person(row: &rusqlite::Row) -> rusqlite::Result<Person> {
 }
 
 /// A drive a user can register for and a registration then refers to.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Drive {
     pub id: i64,
     pub date: chrono::NaiveDate,
     pub deadline: Option<chrono::NaiveDateTime>,
+    pub registration_cap: Option<u32>,
+    pub already_registered_count: u32,
 }
 
 /// How a person uses the bus on a specfic date.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Registration {
-    // The person which registered the bususage. `token` and `token_expiration` are set to
-    // [`Option::None`] because they're irrelevant.
+    /// The person which registered the bususage. `token` and `token_expiration` are set to
+    /// [`Option::None`] because they're irrelevant.
     pub person: Person,
 
-    pub date: chrono::NaiveDate,
+    /// The drive this registration is for.
+    pub drive: Drive,
+
+    /// Whether or not this registration denotes that the person drives. False means that
+    /// this person doesn't drive on that day.
     pub registered: bool,
 }
 
@@ -153,9 +159,10 @@ pub fn init_db_if_necessary(
     }
 }
 
-pub enum DeadlineFilter {
-    OnlyAccessible,
-    OnlyLocked,
+#[derive(Copy, Clone, Debug)]
+pub enum DriveFilter {
+    OnlyPast,
+    OnlyFuture,
     ListAll,
 }
 
@@ -165,7 +172,7 @@ pub enum SearchRegistrationsBy {
     Date(chrono::NaiveDate),
 
     /// Searches the registrations by person id.
-    PersonId { id: i64, filter: DeadlineFilter },
+    PersonId { id: i64, filter: DriveFilter },
 }
 
 /// Creates a vector of [`Registration`]s filtered by the given criteria.
@@ -178,7 +185,14 @@ pub fn search_registrations(
     let mut statement = match by {
         SearchRegistrationsBy::Date(_) => conn.prepare(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, :date
+                drive.drive_id, :date, drive.deadline, drive.registration_cap,
+                registration.registered,
+                (
+                    SELECT count()
+                    FROM drive AS drive_subquery
+                    NATURAL JOIN registration
+                    WHERE registered AND drive_subquery.drivedate == drive.drivedate
+                ) AS already_registered_count
             FROM person
             LEFT OUTER JOIN drive ON (drive.drivedate == :date)
             LEFT OUTER JOIN registration ON (
@@ -190,21 +204,29 @@ pub fn search_registrations(
         ),
         SearchRegistrationsBy::PersonId { filter, .. } => conn.prepare(&format!(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
-                registration.registered, drive.drivedate
+                drive.drive_id, drive.drivedate, drive.deadline, drive.registration_cap,
+                (
+                    SELECT count()
+                    FROM drive AS drive_subquery
+                    NATURAL JOIN registration
+                    WHERE registered AND drive_subquery.drivedate == drive.drivedate
+                ) AS already_registered_count,
+                registration.registered
             FROM drive
             LEFT OUTER JOIN person ON (person.person_id == :id)
             LEFT OUTER JOIN registration ON (
                 registration.drive_id == drive.drive_id
                 AND registration.person_id == person.person_id
             )
-            {}
-            ORDER BY person.name",
+            {}",
             match filter {
-                DeadlineFilter::OnlyAccessible =>
-                    "WHERE :now < drive.deadline AND :now < drive.drivedate",
-                DeadlineFilter::OnlyLocked =>
-                    "WHERE drive.deadline <= :now OR drive.drivedate <= :now",
-                DeadlineFilter::ListAll => "",
+                DriveFilter::OnlyFuture =>
+                    "WHERE :now < drive.deadline
+                    ORDER BY drive.drivedate ASC",
+                DriveFilter::OnlyPast =>
+                    "WHERE drive.deadline <= :now
+                    ORDER BY drive.drivedate DESC",
+                DriveFilter::ListAll => "ORDER BY drive.drivedate ASC",
             },
         )),
     }?;
@@ -212,22 +234,28 @@ pub fn search_registrations(
         SearchRegistrationsBy::Date(date) => statement.query(named_params! { ":date": date }),
         SearchRegistrationsBy::PersonId {
             id,
-            filter: DeadlineFilter::OnlyLocked | DeadlineFilter::OnlyAccessible,
+            filter: DriveFilter::OnlyPast | DriveFilter::OnlyFuture,
         } => {
             let now = Utc::now().naive_utc().date();
             statement.query(named_params! { ":id": id, ":now": now })
         }
         SearchRegistrationsBy::PersonId {
             id,
-            filter: DeadlineFilter::ListAll,
+            filter: DriveFilter::ListAll,
         } => statement.query(named_params! { ":id": id }),
     }?;
     Ok(rows
         .mapped(|row| {
             Ok(Registration {
                 person: row_to_person(row)?,
-                registered: false_if_null(row.get(5))?,
-                date: row.get(6)?,
+                drive: Drive {
+                    id: row.get(5)?,
+                    date: row.get(6)?,
+                    deadline: row.get(7)?,
+                    registration_cap: row.get(8)?,
+                    already_registered_count: row.get(9)?,
+                },
+                registered: false_if_null(row.get(10))?,
             })
         })
         .map(Result::unwrap)
@@ -316,17 +344,17 @@ pub fn update_registration(
     match_constraint_violation!(
         conn.execute(
             "INSERT INTO registration (person_id, drive_id, registered)
-        VALUES (
-            :person_id,
-            (
-                SELECT drive_id
-                FROM drive
-                WHERE drivedate == :date
-            ),
-            :registered
-        )
-        ON CONFLICT(person_id, drive_id)
-              DO UPDATE SET registered=:registered",
+            VALUES (
+                :person_id,
+                (
+                    SELECT drive_id
+                    FROM drive
+                    WHERE drivedate == :date
+                ),
+                :registered
+            )
+            ON CONFLICT(person_id, drive_id)
+            DO UPDATE SET registered=:registered",
             named_params! {
                 ":person_id": registration.person_id,
                 ":date": registration.date,
@@ -335,6 +363,34 @@ pub fn update_registration(
         ),
         ApplyRegistrationError::UnknownDriveDate
     )
+}
+
+/// Checks whether the person is registered for the drive. Does NOT check for validity of the
+/// person ID, just returns `false` if invalid.
+pub fn is_registered(
+    conn: &mut rusqlite::Connection,
+    person_id: i64,
+    drivedate: chrono::NaiveDate,
+) -> Result<bool, rusqlite::Error> {
+    let mut statement = conn.prepare(
+        "SELECT
+            CASE
+                WHEN registered IS NULL THEN false
+                ELSE registered
+            END
+        FROM drive
+        NATURAL JOIN registration
+        WHERE registration.person_id == :id AND drive.drivedate == :date",
+    )?;
+    let mut query = statement.query_map(
+        named_params! {
+            ":id": person_id,
+            ":date": drivedate,
+        },
+        |row| row.get(0),
+    )?;
+
+    query.next().unwrap_or(Ok(false))
 }
 
 pub enum SearchPersonBy {
@@ -450,33 +506,83 @@ pub fn update_token(
     Ok(())
 }
 
-pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<Vec<Drive>, rusqlite::Error> {
-    let mut statement = conn.prepare("SELECT drive_id, drivedate, deadline FROM drive")?;
-    let result = statement.query_map([], |row| {
-        Ok(Drive {
-            id: row.get(0)?,
-            date: row.get(1)?,
-            deadline: row.get(2)?,
-        })
-    })?;
-    result.collect()
+pub struct DriveOverview {
+    pub past: Vec<Drive>,
+    pub future: Vec<Drive>,
 }
 
-pub fn get_drive_deadline(
+pub fn list_drives(conn: &mut rusqlite::Connection) -> Result<DriveOverview, rusqlite::Error> {
+    let now = Utc::now().naive_local().date();
+    let time_slices = ["drivedate < :now", ":now <= drivedate"].map(|condition| {
+        let mut statement = conn.prepare(&format!(
+            "SELECT drive_id, drivedate, deadline, registration_cap,
+                (
+                    SELECT count()
+                    FROM drive AS drive_inner
+                    NATURAL JOIN registration
+                    WHERE registered AND drive_inner.drive_id == drive.drive_id
+                ) AS already_registered_count
+            FROM drive
+            WHERE {}",
+            condition,
+        ))?;
+
+        let rows = statement.query_map(
+            named_params! {
+                ":now": now,
+            },
+            |row| {
+                Ok(Drive {
+                    id: row.get(0)?,
+                    date: row.get(1)?,
+                    deadline: row.get(2)?,
+                    registration_cap: row.get(3)?,
+                    already_registered_count: row.get(4)?,
+                })
+            },
+        )?;
+
+        rows.collect()
+    });
+
+    let [past, future]: [Result<_, _>; 2] = time_slices;
+    Ok(DriveOverview {
+        past: past?,
+        future: future?,
+    })
+}
+
+pub fn get_drive(
     conn: &mut rusqlite::Connection,
     date: chrono::NaiveDate,
-) -> Result<Option<chrono::NaiveDateTime>, rusqlite::Error> {
+) -> Result<Option<Drive>, rusqlite::Error> {
     let mut statement = conn.prepare(
-        "SELECT deadline
+        "SELECT drive_id, drivedate, deadline, registration_cap,
+            (
+                SELECT count()
+                FROM drive
+                NATURAL JOIN registration
+                WHERE registered AND drivedate == :date
+            ) AS already_registered_count
         FROM drive
         WHERE drivedate == :date",
     )?;
-    let mut query = statement.query(named_params! {
-        ":date": date
-    })?;
+    let mut query = statement.query_map(
+        named_params! {
+            ":date": date
+        },
+        |row| {
+            Ok(Drive {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                deadline: row.get(2)?,
+                registration_cap: row.get(3)?,
+                already_registered_count: row.get(4)?,
+            })
+        },
+    )?;
 
-    let row = query.next()?.unwrap();
-    row.get(0)
+    query.next().transpose()
 }
 
 #[derive(Debug, Error)]
@@ -496,8 +602,10 @@ pub fn insert_new_drive(
 ) -> Result<(), InsertDriveError> {
     match_constraint_violation!(
         conn.execute(
-            "INSERT INTO drive (drivedate, deadline)
-            VALUES (:date, :deadline)",
+            "INSERT INTO drive (drivedate, deadline, registration_cap)
+            SELECT :date, :deadline, value
+            FROM settings
+            WHERE name == 'default-registration-cap'",
             named_params! {
                 ":date": date,
                 ":deadline": deadline,
@@ -519,27 +627,36 @@ pub fn delete_drive(conn: &mut rusqlite::Connection, id: i64) -> Result<(), rusq
     Ok(())
 }
 
-#[derive(Clone)]
-pub struct UpdateDeadline {
-    pub id: i64,
-    pub deadline: Option<chrono::NaiveDateTime>,
+#[derive(Debug, Error)]
+pub enum UpdateDriveError {
+    #[error("Database or query error: {0}")]
+    RusqliteError(#[from] rusqlite::Error),
+    #[error("Duplicated drive date")]
+    DateAlreadyExists,
 }
 
-/// Updates when a drive's last registration opportunity (= "deadline") is.
+/// Updates a drive's details, based on the ID.
 pub fn update_drive_deadline(
     conn: &mut rusqlite::Connection,
-    update: UpdateDeadline,
-) -> Result<(), rusqlite::Error> {
-    conn.execute(
-        "UPDATE drive
-        SET deadline = :deadline
-        WHERE drive_id == :id",
-        named_params! {
-            ":deadline": update.deadline,
-            ":id": update.id,
-        },
+    update: Drive,
+) -> Result<(), UpdateDriveError> {
+    match_constraint_violation!(
+        conn.execute(
+            "UPDATE drive
+            SET drivedate = :date,
+                deadline = :deadline,
+                registration_cap = :registration_cap
+            WHERE drive_id == :id",
+            named_params! {
+                ":date": update.date,
+                ":deadline": update.deadline,
+                ":registration_cap": update.registration_cap,
+                ":id": update.id,
+            },
+        )
+        .map(|_| ()),
+        UpdateDriveError::DateAlreadyExists
     )
-    .map(|_| ())
 }
 
 #[derive(Debug, Error)]

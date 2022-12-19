@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS drive(
     drive_id INTEGER,
     drivedate DATE NOT NULL,
     deadline DATETIME,
+    registration_cap INTEGER,
     UNIQUE(drivedate),
     PRIMARY KEY (drive_id AUTOINCREMENT)
 );
@@ -43,4 +44,7 @@ VALUES (
 ), (
     "default-deadline",
     2
+), (
+    "default-registration-cap",
+    50
 );

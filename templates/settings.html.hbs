@@ -44,5 +44,15 @@
                 <button style="margin-left: 1em;">Set as default</button>
             </form>
         </div>
+
+        <div class="settings functionality-section">
+            <h2>Default registration cap</h2>
+            <p>With how many registrations already added to a drive it becomes impossible to add any more. Bypassed if a superuser (you) changes the registration of a person.</p>
+            <form action="/settings/set" method="post">
+                <input type="hidden" name="name" value="default-registration-cap"/>
+                <input type="number" min="0" name="value" value="{{default-registration-cap}}"/>
+                <button style="margin-left: 1em;">Apply changes</button>
+            </form>
+        </div>
     </body>
 </html>

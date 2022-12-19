@@ -1,11 +1,11 @@
 use {
     super::sql_interface::{
-        self, Filter, NewPerson, RegistrationUpdate,
+        self, DriveFilter, NewPerson, RegistrationUpdate,
         SearchPersonBy::{Email, Id},
         SearchRegistrationsBy::{Date, PersonId},
         UpdatePerson, VisibilityFilter,
     },
-    chrono::NaiveDate,
+    chrono::{Days, NaiveDate},
     rusqlite::{types::Value, Connection},
 };
 
@@ -103,8 +103,9 @@ fn register() {
 
     // do you know that date? (no it's not a historical or political reference, just a very special
     // release date)
-    let date = NaiveDate::from_ymd(2009, 1, 16);
-    sql_interface::insert_new_drive(&mut conn, date).unwrap();
+    let date = NaiveDate::from_ymd_opt(2009, 1, 16).unwrap();
+    let deadline = (date - Days::new(2)).and_hms_opt(19, 2, 00).unwrap();
+    sql_interface::insert_new_drive(&mut conn, date, Some(deadline)).unwrap();
 
     let regupdate = RegistrationUpdate {
         date,
@@ -116,7 +117,7 @@ fn register() {
     let regs = sql_interface::search_registrations(&mut conn, &Date(date)).unwrap();
     assert_eq!(regs.len(), 2);
     let reg = &regs[1]; // relying explicitly on sorting
-    assert_eq!(reg.date, date);
+    assert_eq!(reg.drive.date, date);
     assert_eq!(reg.person.prename, "Bob");
     assert!(reg.registered);
 
@@ -124,13 +125,13 @@ fn register() {
         &mut conn,
         &PersonId {
             id: bob.id,
-            ignore_past: false,
+            filter: DriveFilter::ListAll,
         },
     )
     .unwrap();
     assert_eq!(regs.len(), 1);
     let reg = &regs[0];
-    assert_eq!(reg.date, date);
+    assert_eq!(reg.drive.date, date);
     assert_eq!(reg.person.prename, "Bob");
     assert!(reg.registered);
 }

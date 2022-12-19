@@ -4,8 +4,8 @@ use {
         date_helpers::{figure_out_exact_deadline, time_to_chrono_date, time_to_chrono_datetime},
         format_date, server_error,
         sql_interface::{
-            self, DeadlineFilter, InsertDriveError, Person, Registration, SearchPersonBy,
-            SearchRegistrationsBy, VisibilityFilter,
+            self, DriveFilter, InsertDriveError, Person, Registration, SearchPersonBy,
+            SearchRegistrationsBy, UpdateDriveError, VisibilityFilter,
         },
         BususagesDBConn,
     },
@@ -44,51 +44,23 @@ pub async fn drives_panel(
     #[derive(Clone, Debug, Serialize)]
     struct TemplateDrive {
         date: chrono::NaiveDate,
-        pretty_date: String,
         deadline: Option<chrono::NaiveDateTime>,
         id: i64,
     }
 
-    #[derive(Debug, Serialize)]
-    struct Context {
-        flash: Option<String>,
-        drives: Vec<TemplateDrive>,
-        upcoming_drives: Vec<TemplateDrive>,
-    }
-
-    let drives = match conn.run(sql_interface::list_drives).await {
-        Err(err) => {
-            return Err(server_error(
-                &format!("Error while listing drives: {}", err),
-                "an error occured while listing drives",
-            ));
-        }
-        Ok(x) => x,
-    };
-    let drives: Vec<_> = drives
-        .into_iter()
-        .map(|d| TemplateDrive {
-            pretty_date: super::format_date(d.date),
-            date: d.date,
-            deadline: d.deadline,
-            id: d.id,
-        })
-        .collect();
-
-    let now = Utc::now().naive_local().date();
-    let upcoming_drives = drives
-        .clone()
-        .into_iter()
-        .filter(|d| d.date >= now)
-        .take(5)
-        .collect();
+    let drives = conn.run(sql_interface::list_drives).await.map_err(|err| {
+        server_error(
+            format!("Error while listing drives: {}", err),
+            "an error occured while listing drives",
+        )
+    })?;
 
     Ok(Template::render(
         "drives-panel",
-        &Context {
+        context! {
             flash: flash.map(|flash| flash.message().to_string()),
-            upcoming_drives,
-            drives,
+            future_drives: drives.future,
+            past_drives: drives.past,
         },
     ))
 }
@@ -211,39 +183,48 @@ pub async fn delete_drive(
 }
 
 #[derive(FromForm, Debug)]
-pub struct UpdateDeadline {
+pub struct UpdateDrive {
     id: i64,
+    date: time::Date,
     deadline: time::PrimitiveDateTime,
+    registration_cap: Option<u32>,
 }
 
-#[post("/drive/deadline/update", data = "<update>")]
+#[post("/drive/update", data = "<update>")]
 pub async fn update_deadline(
     conn: BususagesDBConn,
-    update: Option<Form<Strict<UpdateDeadline>>>,
+    update: Option<Form<Strict<UpdateDrive>>>,
     _superuser: Superuser,
 ) -> Result<Flash<Redirect>, Flash<Redirect>> {
     let Some(update) = update else {
-        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Invalid date selected."));
+        return Err(Flash::error(Redirect::to(uri!(drives_panel)), "Please fill all fields."));
     };
 
-    let update = sql_interface::UpdateDeadline {
+    let update = sql_interface::Drive {
         id: update.id,
+        date: time_to_chrono_date(update.date),
         deadline: Some(time_to_chrono_datetime(update.deadline)),
+        registration_cap: update.registration_cap,
+        already_registered_count: 0,
     };
 
     let closure_update = update.clone();
     conn.run(move |c| sql_interface::update_drive_deadline(c, closure_update))
         .await
-        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Deadline angepasst."))
-        .map_err(|err| {
-            server_error(
+        .map_err(|err| match err {
+            UpdateDriveError::DateAlreadyExists => Flash::error(
+                Redirect::to(uri!(drives_panel)),
+                "Es existiert bereits ein Drive mit diesem Datum, nichts geändert.",
+            ),
+            UpdateDriveError::RusqliteError(err) => server_error(
                 format!(
                     "Error while updating drive {} to deadline {:?}: {}",
                     update.id, update.deadline, err,
                 ),
                 "ein Fehler trat während der Aktualisierung der Deadline auf",
-            )
+            ),
         })
+        .map(|_| Flash::success(Redirect::to(uri!(drives_panel)), "Änderungen angewandt."))
 }
 
 /// Just a shorthand for an error flash containing a redirect.
@@ -445,7 +426,7 @@ pub async fn introspect_person(
                 c,
                 &SearchRegistrationsBy::PersonId {
                     id,
-                    filter: DeadlineFilter::ListAll,
+                    filter: DriveFilter::ListAll,
                 },
             )
         })
@@ -476,7 +457,7 @@ pub async fn introspect_person(
     let registrations: Vec<_> = registrations
         .into_iter()
         .map(|r| TemplateRegistration {
-            pretty_date: format_date(r.date),
+            pretty_date: format_date(r.drive.date),
             registration: r,
         })
         .collect();
@@ -582,6 +563,12 @@ pub async fn set_setting(
                     "ein Fehler trat während der Anwendung der Default-Deadline auf",
                 ))
             }
+        },
+        "default-registration-cap" => {
+            let cap = update.value.parse::<u32>().map_err(|_| {
+                Flash::error(Redirect::to(uri!(settings)), "Die Zahl ist nicht valide, oder zu groß.")
+            })?;
+            Value::Integer(cap as i64)
         },
         _ => {
             return Err(server_error(
