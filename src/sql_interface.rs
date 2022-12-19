@@ -186,13 +186,13 @@ pub fn search_registrations(
         SearchRegistrationsBy::Date(_) => conn.prepare(
             "SELECT person.person_id, person.prename, person.name, person.email, person.is_visible,
                 drive.drive_id, :date, drive.deadline, drive.registration_cap,
-                registration.registered,
                 (
                     SELECT count()
                     FROM drive AS drive_subquery
                     NATURAL JOIN registration
                     WHERE registered AND drive_subquery.drivedate == drive.drivedate
-                ) AS already_registered_count
+                ) AS already_registered_count,
+                registration.registered
             FROM person
             LEFT OUTER JOIN drive ON (drive.drivedate == :date)
             LEFT OUTER JOIN registration ON (
