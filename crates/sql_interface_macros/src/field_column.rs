@@ -3,14 +3,25 @@ use std::fmt;
 use quote::ToTokens;
 use syn::{
     spanned::Spanned, Attribute, Error, Field, Ident, Lit, Meta, MetaList, MetaNameValue,
-    NestedMeta, Result,
+    NestedMeta, Result, Type,
 };
 
 /// Maps from a field to a column, or the other way around if desired.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct FieldColumn {
     pub field_ident: Ident,
-    pub column: String,
+    pub ty: Type,
+    pub complexity: Complexity,
+}
+
+/// How the field is to be rebuilt from columns.
+#[derive(Clone)]
+pub enum Complexity {
+    /// The field has a complex type and needs multiple columns to be represented. Consult
+    /// `<ty>::select_exprs()` for them.
+    Complex,
+    /// The field is representable through exactly one column.
+    Primitive { column: String },
 }
 
 impl FieldColumn {
@@ -20,26 +31,32 @@ impl FieldColumn {
             .ident
             .ok_or_else(|| Error::new(span, "fields need to have explicit identifiers"))?;
 
-        // see if there's an attribute which overrides the field ident as column
-        let column = field
+        // parse the attributes from the field
+        let attr = field
             .attrs
             .into_iter()
-            .find_map(|raw_attr| {
-                FieldAttr::parse_if_relevant(raw_attr)?
-                    .map(|attr| attr.column)
-                    .transpose()
-            })
-            .unwrap_or_else(|| Ok(field_ident.to_string()))?;
+            .find_map(FieldAttr::parse_if_relevant)
+            .unwrap_or_else(|| Ok(FieldAttr::default()))?;
+
+        let complexity = match attr.is_complex {
+            Some(true) => Complexity::Complex,
+            _ => Complexity::Primitive {
+                column: attr.column.unwrap_or_else(|| field_ident.to_string()),
+            },
+        };
 
         Ok(Self {
             field_ident,
-            column,
+            ty: field.ty,
+            complexity,
         })
     }
 }
 
+#[derive(Default)]
 struct FieldAttr {
     column: Option<String>,
+    is_complex: Option<bool>,
 }
 
 impl FieldAttr {
@@ -54,23 +71,35 @@ impl FieldAttr {
             return error(attr, error_message);
         };
 
-        let mut result = Self { column: None };
+        let mut result = Self::default();
 
         for pair in nested {
             let NestedMeta::Meta(Meta::NameValue(MetaNameValue {
-                path, lit: Lit::Str(value_lit), ..
+                path, lit, ..
             })) = &pair else {
                 return error(attr, error_message);
             };
             let Some(key) = path.get_ident() else { continue; };
-            let value = value_lit.value();
 
-            let previous = match key.to_string().as_ref() {
-                "column" => result.column.replace(value),
-                _ => None,
+            let already_seen = match key.to_string().as_ref() {
+                "column" => {
+                    let Lit::Str(lit) = lit else {
+                        return error(lit, "`column` requires a string literal");
+                    };
+
+                    result.column.replace(lit.value()).is_some()
+                }
+                "complex" => {
+                    let Lit::Bool(lit) = lit else {
+                        return error(lit, "`complex` requires a boolean literal");
+                    };
+
+                    result.is_complex.replace(lit.value()).is_some()
+                }
+                _ => false,
             };
 
-            if previous.is_some() {
+            if already_seen {
                 return error(pair, "same key specified multiple times");
             }
         }

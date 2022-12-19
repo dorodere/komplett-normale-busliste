@@ -66,12 +66,17 @@ pub struct Drive {
 }
 
 /// How a person uses the bus on a specfic date.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Reconstruct)]
 pub struct Registration {
-    /// The person which registered the bususage. `token` and `token_expiration` are set to
-    /// [`Option::None`] because they're irrelevant.
+    /// The person which this registration belongs to. `token` and `token_expiration` are set
+    /// to [`Option::None`] because they're irrelevant.
+    #[sql(complex = true)]
     pub person: Person,
 
-    /// The drive this registration is for.
+    /// The drive this potential registration is for.
+    #[sql(complex = true)]
     pub drive: Drive,
+
+    /// Whether or not the person is registered for this bus drive.
+    pub registered: bool,
 }

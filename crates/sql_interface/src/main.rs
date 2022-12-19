@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 use rusqlite::Connection;
 use sql_interface::{
     statement::Select,
-    types::{Drive, Person},
+    types::{Drive, Person, Registration},
 };
 
 fn crate_root() -> PathBuf {
@@ -35,7 +35,7 @@ fn main() {
         condition: None,
         params: (),
     };
-    let combined: Vec<(Drive, Person)> = query.run().unwrap();
+    let combined: Vec<Registration> = query.run().unwrap();
     let drives: Vec<Drive> = query.run().unwrap();
     let persons: Vec<Person> = query.run().unwrap();
 

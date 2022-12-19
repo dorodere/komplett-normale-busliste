@@ -2,12 +2,14 @@ extern crate proc_macro;
 
 mod field_column;
 
+use std::iter;
+
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Error, Ident, Result};
 
-use field_column::FieldColumn;
+use field_column::{Complexity, FieldColumn};
 
 #[proc_macro_derive(Reconstruct, attributes(sql))]
 pub fn derive_reconstruct(item: TokenStream) -> TokenStream {
@@ -31,32 +33,100 @@ fn generate_impl(input: DeriveInput) -> Result<TokenStream2> {
         .into_iter()
         .map(FieldColumn::from_syn_field)
         .collect();
+    let fields = fields?;
 
-    let (select_exprs, field_idents) = fields?
+    let tables = fields
         .clone()
         .into_iter()
-        .map(|mapping| (mapping.column, mapping.field_ident))
+        .filter_map(expand_table_if_complex)
+        .chain(iter::once(quote! { vec![#table] }))
+        .collect();
+
+    let (select_exprs, reconstruct_exprs) = fields
+        .into_iter()
+        .map(|mapping| {
+            (
+                expand_select_expr(mapping.clone(), &table),
+                expand_reconstruct_expr(mapping),
+            )
+        })
         .unzip();
 
-    Ok(expand(ident, table, select_exprs, field_idents))
+    Ok(expand(ident, tables, select_exprs, reconstruct_exprs))
+}
+
+fn expand_table_if_complex(
+    FieldColumn { ty, complexity, .. }: FieldColumn,
+) -> Option<TokenStream2> {
+    if let Complexity::Complex = complexity {
+        Some(quote! {
+            <#ty>::required_tables()
+        })
+    } else {
+        None
+    }
+}
+
+fn expand_select_expr(
+    FieldColumn { ty, complexity, .. }: FieldColumn,
+    table: impl AsRef<str>,
+) -> TokenStream2 {
+    match complexity {
+        Complexity::Complex => quote! { <#ty>::select_exprs() },
+        Complexity::Primitive { column } => {
+            let table = table.as_ref();
+            let fully_qualified = format!("{table}.{column}");
+
+            quote! { vec![#fully_qualified] }
+        }
+    }
+}
+
+fn expand_reconstruct_expr(
+    FieldColumn {
+        field_ident,
+        ty,
+        complexity,
+        ..
+    }: FieldColumn,
+) -> TokenStream2 {
+    if let Complexity::Complex = complexity {
+        quote! {
+            #field_ident: <#ty>::from_row(
+                (&mut row).take(<#ty>::select_exprs().len())
+            )?,
+        }
+    } else {
+        quote! {
+            #field_ident: crate::sql_struct::next_converted(&mut row)?,
+        }
+    }
 }
 
 fn expand(
     target_ident: Ident,
-    table: String,
-    select_exprs: Vec<String>,
-    field_idents: Vec<Ident>,
+    tables: Vec<TokenStream2>,
+    select_exprs: Vec<TokenStream2>,
+    reconstruct_exprs: Vec<TokenStream2>,
 ) -> TokenStream2 {
     quote! {
         impl crate::sql_struct::Reconstruct for #target_ident {
             fn required_tables() -> ::std::vec::Vec<&'static str> {
-                ::std::vec![#table]
+                [ #(
+                    #tables,
+                )* ]
+                    .into_iter()
+                    .flatten()
+                    .collect()
             }
 
             fn select_exprs() -> std::vec::Vec<&'static str> {
-                ::std::vec![ #(
+                [ #(
                     #select_exprs,
                 )* ]
+                    .into_iter()
+                    .flatten()
+                    .collect()
             }
 
             fn from_row<'a>(
@@ -64,7 +134,7 @@ fn expand(
             ) -> crate::sql_struct::ReconstructResult<Self> {
                 ::std::result::Result::Ok(
                     Self { #(
-                        #field_idents: crate::sql_struct::next_converted(&mut row)?,
+                        #reconstruct_exprs
                     )* }
                 )
             }
