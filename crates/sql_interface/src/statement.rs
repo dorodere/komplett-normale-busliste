@@ -9,19 +9,11 @@ use crate::sql_struct::{Reconstruct, ReconstructResult};
 pub struct Select<'a, P: Params + Clone> {
     pub conn: &'a mut Connection,
 
-    /// Which `LEFT OUTER JOIN`s to use in this query.
-    pub joins: Vec<Join>,
-
     /// What should go into the `WHERE` clause.
     pub condition: Option<&'static str>,
 
     /// Which parameters to insert in the query.
     pub params: P,
-}
-
-pub struct Join {
-    table: &'static str,
-    on: &'static str,
 }
 
 impl<P: Params + Clone> Select<'_, P> {

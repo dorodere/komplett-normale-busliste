@@ -35,11 +35,19 @@ fn generate_impl(input: DeriveInput) -> Result<TokenStream2> {
         .collect();
     let fields = fields?;
 
-    let tables = fields
+    let tables = iter::once(quote! { vec![#table] })
+        .chain(
+            fields
+                .clone()
+                .into_iter()
+                .filter_map(expand_table_if_complex),
+        )
+        .collect();
+
+    let joins = fields
         .clone()
         .into_iter()
-        .filter_map(expand_table_if_complex)
-        .chain(iter::once(quote! { vec![#table] }))
+        .filter_map(expand_join_if_complex)
         .collect();
 
     let (select_exprs, reconstruct_exprs) = fields
@@ -52,15 +60,36 @@ fn generate_impl(input: DeriveInput) -> Result<TokenStream2> {
         })
         .unzip();
 
-    Ok(expand(ident, tables, select_exprs, reconstruct_exprs))
+    Ok(expand(
+        ident,
+        tables,
+        joins,
+        select_exprs,
+        reconstruct_exprs,
+    ))
 }
 
 fn expand_table_if_complex(
     FieldColumn { ty, complexity, .. }: FieldColumn,
 ) -> Option<TokenStream2> {
-    if let Complexity::Complex = complexity {
+    if let Complexity::Complex { .. } = complexity {
+        Some(quote! { <#ty>::required_tables() })
+    } else {
+        None
+    }
+}
+
+fn expand_join_if_complex(FieldColumn { ty, complexity, .. }: FieldColumn) -> Option<TokenStream2> {
+    if let Complexity::Complex {
+        joined_on: Some(joined_on),
+    } = complexity
+    {
         Some(quote! {
-            <#ty>::required_tables()
+            crate::sql_struct::Join {
+                table: <#ty>::required_tables()[0],
+                on: #joined_on,
+            },
+            <#ty>::required_joins()
         })
     } else {
         None
@@ -72,7 +101,7 @@ fn expand_select_expr(
     table: impl AsRef<str>,
 ) -> TokenStream2 {
     match complexity {
-        Complexity::Complex => quote! { <#ty>::select_exprs() },
+        Complexity::Complex { .. } => quote! { <#ty>::select_exprs() },
         Complexity::Primitive { column } => {
             let table = table.as_ref();
             let fully_qualified = format!("{table}.{column}");
@@ -90,7 +119,7 @@ fn expand_reconstruct_expr(
         ..
     }: FieldColumn,
 ) -> TokenStream2 {
-    if let Complexity::Complex = complexity {
+    if let Complexity::Complex { .. } = complexity {
         quote! {
             #field_ident: <#ty>::from_row(
                 (&mut row).take(<#ty>::select_exprs().len())
@@ -106,18 +135,44 @@ fn expand_reconstruct_expr(
 fn expand(
     target_ident: Ident,
     tables: Vec<TokenStream2>,
+    joins: Vec<TokenStream2>,
     select_exprs: Vec<TokenStream2>,
     reconstruct_exprs: Vec<TokenStream2>,
 ) -> TokenStream2 {
+    let tables = if tables.is_empty() {
+        quote! { ::std::vec::Vec::new() }
+    } else {
+        quote! {
+            [ #(
+                #tables,
+            )* ]
+                .into_iter()
+                .flatten()
+                .collect()
+        }
+    };
+
+    let joins = if joins.is_empty() {
+        quote! { ::std::vec::Vec::new() }
+    } else {
+        quote! {
+            [ #(
+                #joins,
+            )* ]
+                .into_iter()
+                .flatten()
+                .collect()
+        }
+    };
+
     quote! {
         impl crate::sql_struct::Reconstruct for #target_ident {
             fn required_tables() -> ::std::vec::Vec<&'static str> {
-                [ #(
-                    #tables,
-                )* ]
-                    .into_iter()
-                    .flatten()
-                    .collect()
+                #tables
+            }
+
+            fn required_joins() -> ::std::vec::Vec<crate::sql_struct::Join> {
+                #joins
             }
 
             fn select_exprs() -> std::vec::Vec<&'static str> {

@@ -8,6 +8,9 @@ where
     /// The tables this struct is stored in, or depends on.
     fn required_tables() -> Vec<&'static str>;
 
+    /// Which `LEFT OUTER JOIN`s the reconstruction of this struct requires.
+    fn required_joins() -> Vec<Join>;
+
     /// Returns all SQL expressions this struct needs in order to be built in
     /// [`Reconstruct::from_row`].
     fn select_exprs() -> Vec<&'static str>;
@@ -15,6 +18,11 @@ where
     /// Reconstructs the implementor of this trait from a row, following the schema of
     /// [`Reconstruct::select_exprs`] in the same order.
     fn from_row<'a>(row: impl Iterator<Item = ValueRef<'a>>) -> ReconstructResult<Self>;
+}
+
+pub struct Join {
+    table: &'static str,
+    on: &'static str,
 }
 
 #[derive(Debug, Error)]
@@ -42,6 +50,14 @@ macro_rules! impl_reconstruct_for_tuple {
                     .flatten()
                     .collect()
             }
+
+            fn required_joins() -> Vec<Join> {
+                [$( $generics::required_joins() ),*]
+                    .into_iter()
+                    .flatten()
+                    .collect()
+            }
+
 
             fn select_exprs() -> Vec<&'static str> {
                 [$( $generics::select_exprs() ),*]

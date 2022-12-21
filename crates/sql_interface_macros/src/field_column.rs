@@ -19,7 +19,7 @@ pub struct FieldColumn {
 pub enum Complexity {
     /// The field has a complex type and needs multiple columns to be represented. Consult
     /// `<ty>::select_exprs()` for them.
-    Complex,
+    Complex { joined_on: Option<String> },
     /// The field is representable through exactly one column.
     Primitive { column: String },
 }
@@ -39,7 +39,9 @@ impl FieldColumn {
             .unwrap_or_else(|| Ok(FieldAttr::default()))?;
 
         let complexity = match attr.is_complex {
-            Some(true) => Complexity::Complex,
+            Some(true) => Complexity::Complex {
+                joined_on: attr.joined_on,
+            },
             _ => Complexity::Primitive {
                 column: attr.column.unwrap_or_else(|| field_ident.to_string()),
             },
@@ -57,6 +59,7 @@ impl FieldColumn {
 struct FieldAttr {
     column: Option<String>,
     is_complex: Option<bool>,
+    joined_on: Option<String>,
 }
 
 impl FieldAttr {
@@ -95,6 +98,13 @@ impl FieldAttr {
                     };
 
                     result.is_complex.replace(lit.value()).is_some()
+                }
+                "joined_on" => {
+                    let Lit::Str(lit) = lit else {
+                        return error(lit, "`joined_on` requires a string literal");
+                    };
+
+                    result.joined_on.replace(lit.value()).is_some()
                 }
                 _ => false,
             };
