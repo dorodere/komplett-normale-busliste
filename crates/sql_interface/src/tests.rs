@@ -51,7 +51,6 @@ fn drive_roundtrip() {
     let query = Select {
         conn: &mut conn,
         condition: None,
-        joins: Vec::new(),
         params: named_params! {},
     };
     let rows: Vec<Drive> = query.run().unwrap();
