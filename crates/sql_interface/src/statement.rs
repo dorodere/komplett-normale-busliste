@@ -26,9 +26,8 @@ impl<P: Params + Clone> Select<'_, P> {
 
         // generate the filtering + join clauses
         let where_clause: &str = self.condition.unwrap_or("true");
-        let join_clauses = self
-            .joins
-            .iter()
+        let join_clauses = T::required_joins()
+            .into_iter()
             .inspect(|join| {
                 // table doesn't need to be in FROM if it's joined already
                 tables.remove(join.table);

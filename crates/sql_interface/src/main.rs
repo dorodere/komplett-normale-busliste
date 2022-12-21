@@ -31,7 +31,6 @@ fn main() {
 
     let query = Select {
         conn: &mut conn,
-        joins: Vec::new(),
         condition: None,
         params: (),
     };

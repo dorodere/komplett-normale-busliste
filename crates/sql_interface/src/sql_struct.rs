@@ -21,8 +21,8 @@ where
 }
 
 pub struct Join {
-    table: &'static str,
-    on: &'static str,
+    pub table: &'static str,
+    pub on: &'static str,
 }
 
 #[derive(Debug, Error)]
