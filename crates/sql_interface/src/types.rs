@@ -70,11 +70,14 @@ pub struct Drive {
 pub struct Registration {
     /// The person which this registration belongs to. `token` and `token_expiration` are set
     /// to [`Option::None`] because they're irrelevant.
-    #[sql(complex = true)]
+    #[sql(
+        complex = true,
+        joined_on = "registration.person_id == person.person_id"
+    )]
     pub person: Person,
 
     /// The drive this potential registration is for.
-    #[sql(complex = true)]
+    #[sql(complex = true, joined_on = "registration.drive_id == drive.drive_id")]
     pub drive: Drive,
 
     /// Whether or not the person is registered for this bus drive.

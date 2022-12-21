@@ -85,10 +85,12 @@ fn expand_join_if_complex(FieldColumn { ty, complexity, .. }: FieldColumn) -> Op
     } = complexity
     {
         Some(quote! {
-            crate::sql_struct::Join {
-                table: <#ty>::required_tables()[0],
-                on: #joined_on,
-            },
+            ::std::vec![
+                crate::sql_struct::Join {
+                    table: <#ty>::required_tables()[0],
+                    on: #joined_on,
+                }
+            ],
             <#ty>::required_joins()
         })
     } else {

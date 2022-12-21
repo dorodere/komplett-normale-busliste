@@ -41,9 +41,10 @@ impl<P: Params + Clone> Select<'_, P> {
         let statement = formatdoc! {"
             SELECT {select_exprs}
             FROM {tables}
-            WHERE {where_clause}
             {join_clauses}
+            WHERE {where_clause}
         "};
+        println!("{statement}");
         let mut statement = self.conn.prepare(&statement)?;
 
         // run it and convert each row to the target tuple
