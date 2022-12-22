@@ -28,11 +28,7 @@ impl FieldColumn {
             .ok_or_else(|| Error::new(span, "fields need to have explicit identifiers"))?;
 
         // parse the attributes from the field
-        let attr = field
-            .attrs
-            .into_iter()
-            .find_map(ParsedAttributes::parse_if_relevant)
-            .unwrap_or_else(|| Ok(ParsedAttributes::default()))?;
+        let attr: ParsedAttributes = field.attrs.try_into()?;
         let attr = FieldAttr::try_from(attr)?;
 
         let complexity = match attr.complex {
@@ -57,22 +53,6 @@ struct FieldAttr {
     column: Option<String>,
     complex: Option<bool>,
     joined_on: Option<String>,
-}
-
-macro_rules! extract_value_from_lit {
-    ($desc:literal as $target:path, from $from:ident named $key:literal $(,)?) => {
-        $from
-            .0
-            .get($key)
-            .map(|attr| {
-                if let $target(lit) = attr.content.clone() {
-                    Ok(lit.value())
-                } else {
-                    Err(Error::new(attr.span, format!("expected {} literal", $desc)))
-                }
-            })
-            .transpose()?
-    };
 }
 
 impl TryFrom<ParsedAttributes> for FieldAttr {

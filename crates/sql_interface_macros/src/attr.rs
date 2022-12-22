@@ -5,6 +5,23 @@ use syn::{
     spanned::Spanned, Attribute, Error, Lit, Meta, MetaList, MetaNameValue, NestedMeta, Result,
 };
 
+#[allow(unused)] // is used in field_column and struct_attr
+macro_rules! extract_value_from_lit {
+    ($desc:literal as $target:path, from $from:ident named $key:literal $(,)?) => {
+        $from
+            .0
+            .get($key)
+            .map(|attr| {
+                if let $target(lit) = attr.content.clone() {
+                    Ok(lit.value())
+                } else {
+                    Err(Error::new(attr.span, format!("expected {} literal", $desc)))
+                }
+            })
+            .transpose()?
+    };
+}
+
 #[derive(Default)]
 pub struct ParsedAttributes(pub HashMap<String, Attr>);
 
@@ -13,8 +30,19 @@ pub struct Attr {
     pub span: Span,
 }
 
+impl TryFrom<Vec<Attribute>> for ParsedAttributes {
+    type Error = Error;
+
+    fn try_from(attrs: Vec<Attribute>) -> Result<Self> {
+        attrs
+            .into_iter()
+            .find_map(Self::parse_if_relevant)
+            .unwrap_or_else(|| Ok(Self::default()))
+    }
+}
+
 impl ParsedAttributes {
-    pub fn parse_if_relevant(attr: Attribute) -> Option<Result<Self>> {
+    fn parse_if_relevant(attr: Attribute) -> Option<Result<Self>> {
         if attr.path.get_ident()? != "sql" {
             return None;
         }
@@ -53,4 +81,22 @@ impl ParsedAttributes {
 
 fn error<T: Spanned, U: fmt::Display>(on: T, message: U) -> Option<Result<ParsedAttributes>> {
     Some(Err(Error::new(on.span(), message)))
+}
+
+// don't ask why this is on top, textual scope is a weird thing
+// this is the only way to use this in the child modules
+macro_rules! extract_value_from_lit {
+    ($desc:literal as $target:path, from $from:ident named $key:literal $(,)?) => {
+        $from
+            .0
+            .get($key)
+            .map(|attr| {
+                if let $target(lit) = attr.content.clone() {
+                    Ok(lit.value())
+                } else {
+                    Err(Error::new(attr.span, format!("expected {} literal", $desc)))
+                }
+            })
+            .transpose()?
+    };
 }

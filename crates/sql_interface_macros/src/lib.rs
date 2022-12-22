@@ -1,13 +1,17 @@
 extern crate proc_macro;
 
+#[macro_use]
 mod attr;
 mod field_column;
+mod struct_attr;
 
 use std::iter;
 
+use attr::ParsedAttributes;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
+use struct_attr::StructAttr;
 use syn::{parse_macro_input, Data, DeriveInput, Error, Ident, Result};
 
 use field_column::{Complexity, FieldColumn};
@@ -26,7 +30,12 @@ fn generate_impl(input: DeriveInput) -> Result<TokenStream2> {
         return Err(Error::new_spanned(input, "only structs can be derived from Reconstruct, for now"));
     };
 
-    let table = input.ident.to_string().to_lowercase();
+    let attr = ParsedAttributes::try_from(input.attrs)?;
+    let struct_attr = StructAttr::try_from(attr)?;
+
+    let table = struct_attr
+        .table
+        .unwrap_or_else(|| input.ident.to_string().to_lowercase());
     let ident = input.ident;
 
     let fields: Result<Vec<_>> = target
