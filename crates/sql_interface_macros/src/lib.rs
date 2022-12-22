@@ -1,5 +1,6 @@
 extern crate proc_macro;
 
+mod attr;
 mod field_column;
 
 use std::iter;

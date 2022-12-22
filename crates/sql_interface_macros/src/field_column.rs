@@ -1,10 +1,6 @@
-use std::fmt;
+use syn::{spanned::Spanned, Error, Field, Ident, Lit, Result, Type};
 
-use quote::ToTokens;
-use syn::{
-    spanned::Spanned, Attribute, Error, Field, Ident, Lit, Meta, MetaList, MetaNameValue,
-    NestedMeta, Result, Type,
-};
+use crate::attr::ParsedAttributes;
 
 /// Maps from a field to a column, or the other way around if desired.
 #[derive(Clone)]
@@ -35,10 +31,11 @@ impl FieldColumn {
         let attr = field
             .attrs
             .into_iter()
-            .find_map(FieldAttr::parse_if_relevant)
-            .unwrap_or_else(|| Ok(FieldAttr::default()))?;
+            .find_map(ParsedAttributes::parse_if_relevant)
+            .unwrap_or_else(|| Ok(ParsedAttributes::default()))?;
+        let attr = FieldAttr::try_from(attr)?;
 
-        let complexity = match attr.is_complex {
+        let complexity = match attr.complex {
             Some(true) => Complexity::Complex {
                 joined_on: attr.joined_on,
             },
@@ -58,66 +55,43 @@ impl FieldColumn {
 #[derive(Default)]
 struct FieldAttr {
     column: Option<String>,
-    is_complex: Option<bool>,
+    complex: Option<bool>,
     joined_on: Option<String>,
 }
 
-impl FieldAttr {
-    fn parse_if_relevant(attr: Attribute) -> Option<Result<Self>> {
-        if attr.path.get_ident()? != "sql" {
-            return None;
-        }
-
-        let error_message = r#"attribute needs to be in the form of `#[sql(column = "...")]` "#;
-
-        let Ok(Meta::List(MetaList { nested, .. })) = attr.parse_meta() else {
-            return error(attr, error_message);
-        };
-
-        let mut result = Self::default();
-
-        for pair in nested {
-            let NestedMeta::Meta(Meta::NameValue(MetaNameValue {
-                path, lit, ..
-            })) = &pair else {
-                return error(attr, error_message);
-            };
-            let Some(key) = path.get_ident() else { continue; };
-
-            let already_seen = match key.to_string().as_ref() {
-                "column" => {
-                    let Lit::Str(lit) = lit else {
-                        return error(lit, "`column` requires a string literal");
-                    };
-
-                    result.column.replace(lit.value()).is_some()
+macro_rules! extract_value_from_lit {
+    ($desc:literal as $target:path, from $from:ident named $key:literal $(,)?) => {
+        $from
+            .0
+            .get($key)
+            .map(|attr| {
+                if let $target(lit) = attr.content.clone() {
+                    Ok(lit.value())
+                } else {
+                    Err(Error::new(attr.span, format!("expected {} literal", $desc)))
                 }
-                "complex" => {
-                    let Lit::Bool(lit) = lit else {
-                        return error(lit, "`complex` requires a boolean literal");
-                    };
-
-                    result.is_complex.replace(lit.value()).is_some()
-                }
-                "joined_on" => {
-                    let Lit::Str(lit) = lit else {
-                        return error(lit, "`joined_on` requires a string literal");
-                    };
-
-                    result.joined_on.replace(lit.value()).is_some()
-                }
-                _ => false,
-            };
-
-            if already_seen {
-                return error(pair, "same key specified multiple times");
-            }
-        }
-
-        Some(Ok(result))
-    }
+            })
+            .transpose()?
+    };
 }
 
-fn error<T: ToTokens, U: fmt::Display>(on: T, message: U) -> Option<Result<FieldAttr>> {
-    Some(Err(Error::new_spanned(on, message)))
+impl TryFrom<ParsedAttributes> for FieldAttr {
+    type Error = Error;
+
+    fn try_from(value: ParsedAttributes) -> Result<Self> {
+        Ok(Self {
+            column: extract_value_from_lit!(
+                "string" as Lit::Str,
+                from value named "column",
+            ),
+            complex: extract_value_from_lit!(
+                "boolean" as Lit::Bool,
+                from value named "complex",
+            ),
+            joined_on: extract_value_from_lit!(
+                "string" as Lit::Str,
+                from value named "joined_on",
+            ),
+        })
+    }
 }
