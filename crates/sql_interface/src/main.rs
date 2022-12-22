@@ -1,10 +1,7 @@
 use std::{env, path::PathBuf};
 
 use rusqlite::Connection;
-use sql_interface::{
-    statement::Select,
-    types::{Drive, Person, Registration},
-};
+use sql_interface::{statement::Select, types::Registration};
 
 fn crate_root() -> PathBuf {
     env::var("CARGO_MANIFEST_DIR")
@@ -31,12 +28,10 @@ fn main() {
 
     let query = Select {
         conn: &mut conn,
-        condition: None,
+        condition: Some(r#"person.prename == "Nyancat""#),
         params: (),
     };
-    let combined: Vec<Registration> = query.run().unwrap();
-    let drives: Vec<Drive> = query.run().unwrap();
-    let persons: Vec<Person> = query.run().unwrap();
+    let registrations: Vec<Registration> = query.run().unwrap();
 
-    dbg!(&combined, combined.len(), drives.len(), persons.len());
+    dbg!(&registrations, registrations.len());
 }

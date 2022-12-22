@@ -44,7 +44,7 @@ impl<P: Params + Clone> Select<'_, P> {
             {join_clauses}
             WHERE {where_clause}
         "};
-        println!("{statement}");
+        println!("{statement}"); // TODO: debug only
         let mut statement = self.conn.prepare(&statement)?;
 
         // run it and convert each row to the target tuple
