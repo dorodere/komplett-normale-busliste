@@ -3,7 +3,7 @@ use sql_interface_macros::Reconstruct;
 use crate::types::{Drive, Person, Registration};
 
 /// [`Registration`] but narrowed down to a specific person, listing all drives.
-#[derive(Debug, PartialEq, Eq, Reconstruct)]
+#[derive(Debug, Reconstruct)]
 #[sql(table = "drive")]
 pub struct RegistrationPerDrive {
     /// The drive this potential registration is for.
@@ -22,4 +22,22 @@ pub struct RegistrationPerDrive {
         "
     )]
     pub registration: Registration,
+}
+
+/// Counts how many registrations are active for all drives.
+#[derive(Debug, Reconstruct)]
+#[sql(table = "drive")]
+pub struct CountRegistrationsPerDrive {
+    #[sql(complex = true)]
+    pub drive: Drive,
+
+    #[sql(expr = "
+        (
+            SELECT count()
+            FROM drive AS drive_subquery
+            NATURAL JOIN registration
+            WHERE registered AND drive_subquery.drivedate == drive.drivedate
+        )
+    ")]
+    pub count: u64,
 }

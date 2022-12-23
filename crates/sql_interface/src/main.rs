@@ -2,7 +2,7 @@ use std::{env, path::PathBuf};
 
 use rusqlite::Connection;
 use sql_interface::{
-    queries::RegistrationPerDrive,
+    queries::{CountRegistrationsPerDrive, RegistrationPerDrive},
     statement::{OrderBy, Select},
 };
 
@@ -36,6 +36,15 @@ fn main() {
         order: Some(OrderBy::Ascending("drive.drivedate")),
     };
     let registrations: Vec<RegistrationPerDrive> = query.run().unwrap();
-
     dbg!(&registrations, registrations.len());
+
+    let query = Select {
+        conn: &mut conn,
+        condition: None,
+        params: (),
+        order: None,
+    };
+    let counts: Vec<CountRegistrationsPerDrive> = query.run().unwrap();
+
+    dbg!(counts);
 }
