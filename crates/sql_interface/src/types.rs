@@ -27,16 +27,16 @@ impl ToSql for Address {
     }
 }
 
+/// **Think twice before using this.** Person in the database with all details required for login.
 #[derive(Debug, PartialEq, Eq, Reconstruct)]
-pub struct Person {
+pub struct FullPerson {
     #[sql(column = "person_id")]
     pub id: i64,
     pub prename: String,
     pub name: String,
     pub email: Address,
 
-    /// The token used to authenticate a login. Is always set to [`Option::None`] in case no token
-    /// is set or it's unnecessary for the query.
+    /// The token used to authenticate a login.
     pub token: Option<String>,
 
     /// A UNIX timestamp in seconds marking on which timepoint the token expires and should not be
@@ -45,12 +45,22 @@ pub struct Person {
 
     /// If the person has elevated previliges, like being allowed to see registration entries and
     /// create new drive dates.
-    ///
-    /// Automatically set to false if it is not needed for the current query, like querying
-    /// registrations themselves.
     pub is_superuser: bool,
 
     /// Whether or not the person shows up in the registration list. They can log in regardless of this.
+    pub is_visible: bool,
+}
+
+/// The person model you likely want to use instead, limited to only publicly visible
+/// information.
+#[derive(Debug, PartialEq, Eq, Reconstruct)]
+pub struct Person {
+    #[sql(column = "person_id")]
+    pub id: i64,
+    pub prename: String,
+    pub name: String,
+    pub email: Address,
+    pub is_superuser: bool,
     pub is_visible: bool,
 }
 
