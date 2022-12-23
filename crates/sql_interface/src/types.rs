@@ -68,18 +68,28 @@ pub struct Drive {
 /// How a person uses the bus on a specfic date.
 #[derive(Debug, PartialEq, Eq, Reconstruct)]
 pub struct Registration {
-    /// The person which this registration belongs to. `token` and `token_expiration` are set
-    /// to [`Option::None`] because they're irrelevant.
-    #[sql(
-        complex = true,
-        joined_on = "registration.person_id == person.person_id"
-    )]
-    pub person: Person,
+    /// Whether or not the person is registered for the bus drive.
+    pub registered: Option<bool>,
+}
 
+/// [`Registration`] but narrowed down to a specific person, listing all drives.
+#[derive(Debug, PartialEq, Eq, Reconstruct)]
+#[sql(table = "drive")]
+pub struct RegistrationPerDrive {
     /// The drive this potential registration is for.
-    #[sql(complex = true, joined_on = "registration.drive_id == drive.drive_id")]
+    #[sql(complex = true)]
     pub drive: Drive,
 
-    /// Whether or not the person is registered for this bus drive.
-    pub registered: bool,
+    /// The person which this registration belongs to.
+    #[sql(complex = true, condition_in_join = true)]
+    pub person: Person,
+
+    #[sql(
+        complex = true,
+        joined_on = "
+            registration.drive_id == drive.drive_id
+            AND registration.person_id == person.person_id
+        "
+    )]
+    pub registration: Registration,
 }

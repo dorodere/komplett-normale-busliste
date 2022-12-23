@@ -14,7 +14,7 @@ use quote::quote;
 use struct_attr::StructAttr;
 use syn::{parse_macro_input, Data, DeriveInput, Error, Ident, Result};
 
-use field_column::{Complexity, FieldColumn};
+use field_column::{Complexity, FieldColumn, JoinKind};
 
 #[proc_macro_derive(Reconstruct, attributes(sql))]
 pub fn derive_reconstruct(item: TokenStream) -> TokenStream {
@@ -91,14 +91,20 @@ fn expand_table_if_complex(
 
 fn expand_join_if_complex(FieldColumn { ty, complexity, .. }: FieldColumn) -> Option<TokenStream2> {
     if let Complexity::Complex {
-        joined_on: Some(joined_on),
+        joined_on: joined_on @ (JoinKind::Condition | JoinKind::On(_)),
     } = complexity
     {
+        let clause = match joined_on {
+            JoinKind::On(clause) => quote! { crate::sql_struct::JoinClause::On(#clause) },
+            JoinKind::Condition => quote! { crate::sql_struct::JoinClause::Condition },
+            _ => unreachable!(),
+        };
+
         Some(quote! {
             ::std::vec![
                 crate::sql_struct::Join {
                     table: <#ty>::required_tables()[0],
-                    on: #joined_on,
+                    clause: #clause,
                 }
             ],
             <#ty>::required_joins()

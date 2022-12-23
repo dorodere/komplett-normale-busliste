@@ -22,7 +22,12 @@ where
 
 pub struct Join {
     pub table: &'static str,
-    pub on: &'static str,
+    pub clause: JoinClause,
+}
+
+pub enum JoinClause {
+    On(&'static str),
+    Condition,
 }
 
 #[derive(Debug, Error)]
