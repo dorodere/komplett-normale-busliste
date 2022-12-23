@@ -15,16 +15,15 @@ pub struct FieldColumn {
 pub enum Complexity {
     /// The field has a complex type and needs multiple columns to be represented. Consult
     /// `<ty>::select_exprs()` for them.
-    Complex { joined_on: JoinKind },
+    Complex { join: Option<JoinClause> },
     /// The field is representable through exactly one column.
     Primitive { column: String },
 }
 
 #[derive(Clone)]
-pub enum JoinKind {
+pub enum JoinClause {
     On(String),
     Condition,
-    None,
 }
 
 impl FieldColumn {
@@ -40,10 +39,10 @@ impl FieldColumn {
 
         let complexity = match attr.complex {
             Some(true) => Complexity::Complex {
-                joined_on: match (attr.joined_on, attr.condition_in_join) {
-                    (Some(clause), _) => JoinKind::On(clause),
-                    (_, Some(true)) => JoinKind::Condition,
-                    _ => JoinKind::None,
+                join: match (attr.joined_on, attr.condition_in_join) {
+                    (Some(clause), _) => Some(JoinClause::On(clause)),
+                    (_, Some(true)) => Some(JoinClause::Condition),
+                    _ => None,
                 },
             },
             _ => Complexity::Primitive {
@@ -61,9 +60,22 @@ impl FieldColumn {
 
 #[derive(Default)]
 struct FieldAttr {
+    /// Sets the SQL expression (can also be just a column) this field is built from.
+    /// Defaults to the field identifier.
     column: Option<String>,
+
+    /// Whether or not this field should be constructed using `Reconstruct` rather than using
+    /// `FromSql`. Defaults to `FromSql`, so `false`.
     complex: Option<bool>,
+
+    /// If the field value is complex, use a `JOIN` on the other table and this clause in it.
+    /// Defaults to using a cross-product instead. Conflicts with
+    /// `condition_in_join`.
     joined_on: Option<String>,
+
+    /// If the field value is complex, use a `JOIN` on the other table and fill the query
+    /// condition in the `ON` clause. Defaults to using a cross-product instead.
+    /// Conflicts with `joined_on`.
     condition_in_join: Option<bool>,
 }
 

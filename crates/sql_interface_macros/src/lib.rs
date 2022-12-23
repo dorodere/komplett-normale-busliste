@@ -14,7 +14,7 @@ use quote::quote;
 use struct_attr::StructAttr;
 use syn::{parse_macro_input, Data, DeriveInput, Error, Ident, Result};
 
-use field_column::{Complexity, FieldColumn, JoinKind};
+use field_column::{Complexity, FieldColumn, JoinClause};
 
 #[proc_macro_derive(Reconstruct, attributes(sql))]
 pub fn derive_reconstruct(item: TokenStream) -> TokenStream {
@@ -90,28 +90,26 @@ fn expand_table_if_complex(
 }
 
 fn expand_join_if_complex(FieldColumn { ty, complexity, .. }: FieldColumn) -> Option<TokenStream2> {
-    if let Complexity::Complex {
-        joined_on: joined_on @ (JoinKind::Condition | JoinKind::On(_)),
-    } = complexity
-    {
-        let clause = match joined_on {
-            JoinKind::On(clause) => quote! { crate::sql_struct::JoinClause::On(#clause) },
-            JoinKind::Condition => quote! { crate::sql_struct::JoinClause::Condition },
-            _ => unreachable!(),
-        };
+    let Complexity::Complex {
+        join: Some(join_clause),
+    } = complexity else {
+        return None;
+    };
 
-        Some(quote! {
-            ::std::vec![
-                crate::sql_struct::Join {
-                    table: <#ty>::required_tables()[0],
-                    clause: #clause,
-                }
-            ],
-            <#ty>::required_joins()
-        })
-    } else {
-        None
-    }
+    let clause = match join_clause {
+        JoinClause::On(clause) => quote! { crate::sql_struct::JoinClause::On(#clause) },
+        JoinClause::Condition => quote! { crate::sql_struct::JoinClause::Condition },
+    };
+
+    Some(quote! {
+        ::std::vec![
+            crate::sql_struct::Join {
+                table: <#ty>::required_tables()[0],
+                clause: #clause,
+            }
+        ],
+        <#ty>::required_joins()
+    })
 }
 
 fn expand_select_expr(
