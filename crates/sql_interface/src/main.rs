@@ -1,7 +1,10 @@
 use std::{env, path::PathBuf};
 
 use rusqlite::Connection;
-use sql_interface::{statement::Select, types::RegistrationPerDrive};
+use sql_interface::{
+    queries::RegistrationPerDrive,
+    statement::{OrderBy, Select},
+};
 
 fn crate_root() -> PathBuf {
     env::var("CARGO_MANIFEST_DIR")
@@ -30,6 +33,7 @@ fn main() {
         conn: &mut conn,
         condition: Some(r#"person.prename == "Nyancat""#),
         params: (),
+        order: Some(OrderBy::Ascending("drive.drivedate")),
     };
     let registrations: Vec<RegistrationPerDrive> = query.run().unwrap();
 

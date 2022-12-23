@@ -14,6 +14,16 @@ pub struct Select<'a, P: Params + Clone> {
 
     /// Which parameters to insert in the query.
     pub params: P,
+
+    /// How to order the results.
+    pub order: Option<OrderBy>,
+}
+
+pub enum OrderBy {
+    /// Highest results are listed last.
+    Ascending(&'static str),
+    /// Highest results are listed first.
+    Descending(&'static str),
 }
 
 impl<P: Params + Clone> Select<'_, P> {
@@ -55,6 +65,12 @@ impl<P: Params + Clone> Select<'_, P> {
             "true"
         };
 
+        let order_by_clause = match self.order {
+            Some(OrderBy::Ascending(on)) => format!("ORDER BY {on} ASC"),
+            Some(OrderBy::Descending(on)) => format!("ORDER BY {on} DESC"),
+            None => "".to_string(),
+        };
+
         let tables = tables.into_iter().join(", ");
 
         // actually build the query
@@ -63,6 +79,7 @@ impl<P: Params + Clone> Select<'_, P> {
             FROM {tables}
             {join_clauses}
             WHERE {where_clause}
+            {order_by_clause}
         "};
         println!("{statement}"); // TODO: debug only
         let mut statement = self.conn.prepare(&statement)?;

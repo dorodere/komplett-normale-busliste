@@ -2,6 +2,7 @@
 
 use rusqlite::Result;
 
+pub mod queries;
 pub mod sql_struct;
 pub mod statement;
 pub mod types;
