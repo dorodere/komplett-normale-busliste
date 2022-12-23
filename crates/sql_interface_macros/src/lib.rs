@@ -14,7 +14,7 @@ use quote::quote;
 use struct_attr::StructAttr;
 use syn::{parse_macro_input, Data, DeriveInput, Error, Ident, Result};
 
-use field_column::{Complexity, FieldColumn, JoinClause};
+use field_column::{Complexity, FieldColumn, JoinClause, SqlLink};
 
 #[proc_macro_derive(Reconstruct, attributes(sql))]
 pub fn derive_reconstruct(item: TokenStream) -> TokenStream {
@@ -118,11 +118,16 @@ fn expand_select_expr(
 ) -> TokenStream2 {
     match complexity {
         Complexity::Complex { .. } => quote! { <#ty>::select_exprs() },
-        Complexity::Primitive { column } => {
-            let table = table.as_ref();
-            let fully_qualified = format!("{table}.{column}");
+        Complexity::Primitive { link } => {
+            let expr = match link {
+                SqlLink::Column(column) => {
+                    let table = table.as_ref();
+                    format!("{table}.{column}")
+                }
+                SqlLink::Expression(expr) => expr,
+            };
 
-            quote! { vec![#fully_qualified] }
+            quote! { vec![#expr] }
         }
     }
 }

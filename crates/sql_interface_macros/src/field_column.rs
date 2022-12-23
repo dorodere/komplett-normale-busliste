@@ -17,13 +17,19 @@ pub enum Complexity {
     /// `<ty>::select_exprs()` for them.
     Complex { join: Option<JoinClause> },
     /// The field is representable through exactly one column.
-    Primitive { column: String },
+    Primitive { link: SqlLink },
 }
 
 #[derive(Clone)]
 pub enum JoinClause {
     On(String),
     Condition,
+}
+
+#[derive(Clone)]
+pub enum SqlLink {
+    Column(String),
+    Expression(String),
 }
 
 impl FieldColumn {
@@ -46,7 +52,11 @@ impl FieldColumn {
                 },
             },
             _ => Complexity::Primitive {
-                column: attr.column.unwrap_or_else(|| field_ident.to_string()),
+                link: match (attr.column, attr.expr) {
+                    (Some(column), _) => SqlLink::Column(column),
+                    (_, Some(expr)) => SqlLink::Expression(expr),
+                    _ => SqlLink::Column(field_ident.to_string()),
+                },
             },
         };
 
@@ -60,9 +70,13 @@ impl FieldColumn {
 
 #[derive(Default)]
 struct FieldAttr {
-    /// Sets the SQL expression (can also be just a column) this field is built from.
-    /// Defaults to the field identifier.
+    /// Sets the table column this field is built from.
+    /// Defaults to the field identifier. Conflicts with `expr`.
     column: Option<String>,
+
+    /// Sets the SQL expression this field is built from.
+    /// Defaults to the field identifier. Conflicts with `column`.
+    expr: Option<String>,
 
     /// Whether or not this field should be constructed using `Reconstruct` rather than using
     /// `FromSql`. Defaults to `FromSql`, so `false`.
@@ -88,6 +102,10 @@ impl TryFrom<ParsedAttributes> for FieldAttr {
                 "string" as Lit::Str,
                 from value named "column",
             ),
+            expr: extract_value_from_lit!(
+                "string" as Lit::Str,
+                from value named "expr",
+            ),
             complex: extract_value_from_lit!(
                 "boolean" as Lit::Bool,
                 from value named "complex",
@@ -106,6 +124,13 @@ impl TryFrom<ParsedAttributes> for FieldAttr {
             return Err(Error::new(
                 value.0.get("joined_on").unwrap().content.span(),
                 r#"`joined_on` and `condition_in_join` conflict with each other, use only one"#,
+            ));
+        }
+
+        if parsed.column.is_some() && parsed.expr.is_some() {
+            return Err(Error::new(
+                value.0.get("column").unwrap().content.span(),
+                r#"`column` and `expr` conflict with each other, use only one"#,
             ));
         }
 

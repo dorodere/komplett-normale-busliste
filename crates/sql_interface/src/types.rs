@@ -69,7 +69,13 @@ pub struct Drive {
 #[derive(Debug, PartialEq, Eq, Reconstruct)]
 pub struct Registration {
     /// Whether or not the person is registered for the bus drive.
-    pub registered: Option<bool>,
+    #[sql(expr = "
+        CASE
+            WHEN registration.registered IS NULL THEN false
+            ELSE registration.registered
+        END
+    ")]
+    pub registered: bool,
 }
 
 /// [`Registration`] but narrowed down to a specific person, listing all drives.
