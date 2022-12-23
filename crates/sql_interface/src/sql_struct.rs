@@ -1,6 +1,7 @@
-use rusqlite::types::{FromSql, FromSqlError, ValueRef};
+use rusqlite::types::{FromSql, FromSqlError, ToSqlOutput, ValueRef};
 use thiserror::Error;
 
+/// Allows rebuilding a struct from SQL values.
 pub trait Reconstruct
 where
     Self: Sized,
@@ -28,6 +29,18 @@ pub struct Join {
 pub enum JoinClause {
     On(&'static str),
     Condition,
+}
+
+/// Allows inserting a struct into an SQL database.
+pub trait Inspect {
+    /// What table this struct belongs to.
+    fn table(&self) -> &'static str;
+
+    /// Which columns this struct contains.
+    fn columns(&self) -> Vec<&'static str>;
+
+    /// Represents this struct as a row, following the order of `columns`.
+    fn as_row(&self) -> rusqlite::Result<Vec<ToSqlOutput<'_>>>;
 }
 
 #[derive(Debug, Error)]
@@ -96,7 +109,7 @@ impl_reconstruct_for_tuple!(
 );
 
 /// Helper function to retrieve the next cell from a row iterator, while mapping
-/// [`None`] to [`Reconstruct::NotEnoughValues`].
+/// [`None`] to [`ReconstructError::NotEnoughValues`].
 pub fn next_converted<'a, T: FromSql>(
     mut row: impl Iterator<Item = ValueRef<'a>>,
 ) -> ReconstructResult<T> {
