@@ -17,7 +17,7 @@ use {
     rocket::{
         config::Config as RocketConfig,
         form::{Form, Strict},
-        http::{Cookie, CookieJar, Status, SameSite},
+        http::{Cookie, CookieJar, SameSite, Status},
         request::{FlashMessage, FromRequest, Outcome, Request},
         response::{Flash, Redirect},
         State,

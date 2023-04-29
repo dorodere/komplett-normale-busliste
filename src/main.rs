@@ -16,7 +16,7 @@ use {
     rocket::{
         fairing::AdHoc,
         form::{Form, Strict},
-        fs::{relative, FileServer},
+        fs::FileServer,
         http::{Cookie, CookieJar},
         request::FlashMessage,
         response::{Flash, Redirect},
@@ -303,5 +303,5 @@ fn rocket() -> _ {
                 authflow::verify_token
             ],
         )
-        .mount("/static", FileServer::from(relative!("/static")))
+        .mount("/static", FileServer::from("./static"))
 }
