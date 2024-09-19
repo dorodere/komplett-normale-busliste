@@ -210,6 +210,7 @@ pub fn search_registrations(
                     FROM drive AS drive_subquery
                     NATURAL JOIN registration
                     WHERE registered AND drive_subquery.drivedate == drive.drivedate
+                    ORDER BY drive.drive_id DESC
                 ) AS already_registered_count,
                 registration.registered
             FROM drive
